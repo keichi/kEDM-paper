@@ -1,0 +1,172 @@
+{
+   "empirical": {
+      "gbytes": {
+         "data": [
+            [
+               "L1", 
+               3040.38
+            ], 
+            [
+               "DRAM", 
+               784.52
+            ]
+         ], 
+         "metadata": {
+            "TIMESTAMP_DATA": [
+               1604333451.06, 
+               1604333694.23, 
+               1604333936.69, 
+               1604334178.89, 
+               1604333208.6
+            ], 
+            "GPU_THREADS": 64, 
+            "FLOPS": 2, 
+            "GPU_BLOCKS": 2560, 
+            "TIMESTAMP_DB": 1604386939.466396
+         }
+      }, 
+      "gflops": {
+         "data": [
+            [
+               "FP16 GFLOPs", 
+               22938.83
+            ], 
+            [
+               "FP32 GFLOPs", 
+               12787.08
+            ], 
+            [
+               "FP64 GFLOPs", 
+               6900.37
+            ]
+         ], 
+         "metadata": {
+            "TIMESTAMP_DATA": [
+               1604373999.96, 
+               1604373141.05, 
+               1604373426.79, 
+               1604374286.5, 
+               1604373713.39
+            ], 
+            "GPU_THREADS": 512, 
+            "FLOPS": 256, 
+            "GPU_BLOCKS": 320, 
+            "TIMESTAMP_DB": 1604386939.46611
+         }
+      }, 
+      "metadata": {
+         "ERT_VERSION": "1.1.0", 
+         "HOSTNAME": [
+            "ika.snl.salk.edu", 
+            [], 
+            [
+               "198.202.70.98"
+            ]
+         ], 
+         "CONFIG": {
+            "ERT_WORKING_SET_MIN": [
+               "128"
+            ], 
+            "ERT_CFLAGS": [
+               "-O3", 
+               "-std=c++11"
+            ], 
+            "ERT_CC": [
+               "nvcc"
+            ], 
+            "ERT_BLOCKS_THREADS": [
+               "163840"
+            ], 
+            "ERT_FLOPS": [
+               "1,2,4,8,16,32,64,128,256,512"
+            ], 
+            "ERT_WSS_MULT": [
+               1.1
+            ], 
+            "ERT_HIP": [
+               false
+            ], 
+            "ERT_RESULTS": [
+               "Results.ika.snl.salk.edu"
+            ], 
+            "ERT_MEMORY_MAX": [
+               "1073741824"
+            ], 
+            "ERT_LDFLAGS": [], 
+            "ERT_LDLIBS": [], 
+            "ERT_RUN": [
+               "./ERT_CODE"
+            ], 
+            "ERT_OCL": [
+               false
+            ], 
+            "ERT_GPU_THREADS": [
+               "64,128,256,512,1024"
+            ], 
+            "ERT_SYCL": [
+               false
+            ], 
+            "ERT_MPI": [
+               false
+            ], 
+            "ERT_TRIALS_MIN": [
+               "1"
+            ], 
+            "ERT_DRIVER": [
+               "driver1"
+            ], 
+            "ERT_GPU_LDFLAGS": [], 
+            "ERT_OPENMP": [
+               false
+            ], 
+            "ERT_GPU_CFLAGS": [
+               "-x", 
+               "cu", 
+               "-arch=sm_70"
+            ], 
+            "ERT_KERNEL": [
+               "kernel1"
+            ], 
+            "ERT_GPU": [
+               "True"
+            ], 
+            "ERT_LD": [
+               "nvcc"
+            ], 
+            "ERT_NUM_EXPERIMENTS": [
+               "5"
+            ], 
+            "ERT_PRECISION": [
+               "FP16", 
+               "FP32", 
+               "FP64"
+            ], 
+            "ERT_ALIGN": [
+               "32"
+            ], 
+            "ERT_GNUPLOT": [
+               "gnuplot"
+            ], 
+            "ERT_GPU_BLOCKS": [
+               "80,160,320,640,1280,2560"
+            ]
+         }, 
+         "UNAME": [
+            "Linux", 
+            "ika.snl.salk.edu", 
+            "3.10.0-1127.13.1.el7.x86_64", 
+            "#1 SMP Tue Jun 23 15:46:38 UTC 2020", 
+            "x86_64", 
+            "x86_64"
+         ]
+      }
+   }, 
+   "spec": {
+      "gbytes": {
+         "data": []
+      }, 
+      "gflops": {
+         "data": []
+      }
+   }
+}

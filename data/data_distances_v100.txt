@@ -1,0 +1,12 @@
+memroofs 14336 2996.77 828.758
+mem_roof_names 'L1' 'L2' 'HBM'
+comproofs 13955 6977.5
+comp_roof_names 'FMA' 'No-FMA'
+
+# omit the following if only plotting roofs
+AI_HBM 0.748 1.497 3.741 7.484 14.963
+AI_L2 0.697 1.438 3.565 6.115 8.654
+AI_L1 0.331 0.398 0.452 0.482 0.495
+FLOPS 517.802 629.902 1580.414 2091.287 2648.925
+
+labels 'E=1' 'E=2' 'E=5' 'E=10' 'E=20'
