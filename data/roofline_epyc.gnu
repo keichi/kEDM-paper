@@ -1,19 +1,19 @@
 #!/usr/bin/gnuplot -persist
 #
-#
+#    
 #    	G N U P L O T
-#    	Version 4.2 patchlevel 6
+#    	Version 4.2 patchlevel 6 
 #    	last modified Sep 2009
 #    	System: Linux 2.6.32-55-generic
-#
+#    
 #    	Copyright (C) 1986 - 1993, 1998, 2004, 2007 - 2009
 #    	Thomas Williams, Colin Kelley and many others
-#
+#    
 #    	Type `help` to access the on-line reference manual.
 #    	The gnuplot FAQ is available from http://www.gnuplot.info/faq/
-#
+#    
 #    	Send bug reports and suggestions to <http://sourceforge.net/projects/gnuplot>
-#
+#    
 unset clip points
 set clip one
 unset clip two
@@ -52,7 +52,7 @@ set encoding default
 unset polar
 unset parametric
 unset decimalsign
-set view 60, 30, 1, 1
+set view 60, 30, 1, 1  
 set samples 1000, 1000
 set isosamples 10, 10
 set surface
@@ -65,7 +65,7 @@ set cntrparam order 4
 set cntrparam linear
 set cntrparam levels auto 5
 set cntrparam points 5
-# set size ratio -1 1,1
+set size ratio -1 1,1
 set origin 0,0
 set style data lines
 set style function lines
@@ -86,24 +86,24 @@ set ztics autofreq
 set nox2tics
 set noy2tics
 set cbtics autofreq
-set title "Empirical Roofline Graph (Results.aori.snl.salk.edu/Run.001)"
-set timestamp bottom
-set timestamp ""
+set title "Empirical Roofline Graph (Results.aori.snl.salk.edu/Run.004)" 
+set timestamp bottom 
+set timestamp "" 
 set rrange [ * : * ] noreverse nowriteback  # (currently [0.00000:10.0000] )
 set trange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set urange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set vrange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
-set xlabel "FLOPs / Byte"
-set x2label ""
+set xlabel "FLOPs / Byte" 
+set x2label "" 
 set xrange [1.000000e-02 : 1.000000e+02] noreverse nowriteback
 set x2range [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
-set ylabel "GFLOPs / sec"
-set y2label ""
-set yrange [1.000000e+02 : *] noreverse nowriteback
+set ylabel "GFLOPs / sec" 
+set y2label "" 
+set yrange [1.000000e+01 : *] noreverse nowriteback
 set y2range [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
-set zlabel ""
+set zlabel "" 
 set zrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
-set cblabel ""
+set cblabel "" 
 set cbrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
 set zero 1e-08
 set lmargin  -1
@@ -113,26 +113,26 @@ set tmargin  -1
 set locale "C"
 set pm3d explicit at s
 set pm3d scansautomatic
-set palette positive nops_allcF maxcolors 0 gamma 1.5 color model RGB
+set palette positive nops_allcF maxcolors 0 gamma 1.5 color model RGB 
 set palette rgbformulae 7, 5, 15
 set colorbox default
-set loadpath
+set loadpath 
 set fit noerrorvariables
 
 set term postscript solid color rounded
-set output "roofline_epyc.ps"
+set output "Results.aori.snl.salk.edu/Run.004/roofline.ps"
 
 # Plotting goes after this...
-set label '7235.8 GFLOPs/sec (FP32 Maximum)' at 2.0000000e+00,8.6829120e+03 left textcolor rgb '#000080'
-set label '3681.2 GFLOPs/sec (FP64 Maximum)' at 2.0000000e+00,4.4174040e+03 left textcolor rgb '#000080'
-set label 'L1 - 12904.9 GB/s' at 6.0016919e-02,9.3715630e+02 left rotate by 45 textcolor rgb '#800000'
-set label 'L2 - 7988.2 GB/s' at 7.6282592e-02,7.3732725e+02 left rotate by 45 textcolor rgb '#800000'
-set label 'L3 - 3044.7 GB/s' at 1.2356021e-01,4.5520507e+02 left rotate by 45 textcolor rgb '#800000'
-set label 'DRAM - 304.1 GB/s' at 3.4472951e-01,1.2682616e+02 left rotate by 45 textcolor rgb '#800000'
+set label '3740.0 GFLOPs/sec (FP32 Maximum)' at 2.0000000e+00,4.4879520e+03 left textcolor rgb '#000080'
+set label '1854.2 GFLOPs/sec (FP64 Maximum)' at 2.0000000e+00,2.2250760e+03 left textcolor rgb '#000080'
+set label 'L1 - 6569.5 GB/s' at 6.0475028e-02,4.8072028e+02 left rotate by 45 textcolor rgb '#800000'
+set label 'L2 - 4034.7 GB/s' at 7.7167484e-02,3.7673345e+02 left rotate by 45 textcolor rgb '#800000'
+set label 'L3 - 1631.9 GB/s' at 1.2133743e-01,2.3959278e+02 left rotate by 45 textcolor rgb '#800000'
+set label 'DRAM - 153.0 GB/s' at 3.4937888e-01,6.4680512e+01 left rotate by 45 textcolor rgb '#800000'
 plot \
-     (x <= 5.6070082e-01 ? 1.2904850e+04 * x : 1/0) lc 1 lw 2,\
-     (x <= 9.0580493e-01 ? 7.9882100e+03 * x : 1/0) lc 1 lw 2,\
-     (x <= 2.3765178e+00 ? 3.0446900e+03 * x : 1/0) lc 1 lw 2,\
-     (x <= 2.3797928e+01 ? 3.0405000e+02 * x : 1/0) lc 1 lw 2,\
-     (x >= 5.6070082e-01 ? 7.2357600e+03 : 1/0) lc 3 lw 2,\
-     (x >= 2.8525477e-01 ? 3.6811700e+03 : 1/0) lc 3 lw 2
+     (x <= 5.6929316e-01 ? 6.5694800e+03 * x : 1/0) lc 1 lw 2,\
+     (x <= 9.2694183e-01 ? 4.0347300e+03 * x : 1/0) lc 1 lw 2,\
+     (x <= 2.2917826e+00 ? 1.6319000e+03 * x : 1/0) lc 1 lw 2,\
+     (x <= 2.4444183e+01 ? 1.5300000e+02 * x : 1/0) lc 1 lw 2,\
+     (x >= 5.6929316e-01 ? 3.7399600e+03 : 1/0) lc 3 lw 2,\
+     (x >= 2.8224913e-01 ? 1.8542300e+03 : 1/0) lc 3 lw 2

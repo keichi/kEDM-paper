@@ -86,7 +86,7 @@ set ztics autofreq
 set nox2tics
 set noy2tics
 set cbtics autofreq
-set title "Empirical Roofline Graph (Results.ika.snl.salk.edu/Run.001)" 
+set title "Empirical Roofline Graph (Results.ika.snl.salk.edu/Run.002)" 
 set timestamp bottom 
 set timestamp "" 
 set rrange [ * : * ] noreverse nowriteback  # (currently [0.00000:10.0000] )
@@ -120,17 +120,17 @@ set loadpath
 set fit noerrorvariables
 
 set term postscript solid color rounded
-set output "Results.ika.snl.salk.edu/Run.001/roofline.ps"
+set output "Results.ika.snl.salk.edu/Run.002/roofline.ps"
 
 # Plotting goes after this...
-set label '22938.8 GFLOPs/sec (FP16 Maximum)' at 2.0000000e+00,2.7526596e+04 left textcolor rgb '#000080'
-set label '12787.1 GFLOPs/sec (FP32 Maximum)' at 2.0000000e+00,1.5344496e+04 left textcolor rgb '#000080'
-set label '6900.4 GFLOPs/sec (FP64 Maximum)' at 2.0000000e+00,8.2804440e+03 left textcolor rgb '#000080'
-set label 'L1 - 3040.4 GB/s' at 2.2015563e-01,8.0992170e+02 left rotate by 45 textcolor rgb '#800000'
-set label 'DRAM - 784.5 GB/s' at 3.8211361e-01,3.6272868e+02 left rotate by 45 textcolor rgb '#800000'
+set label '25793.2 GFLOPs/sec (FP16 Maximum)' at 2.0000000e+00,3.0951780e+04 left textcolor rgb '#000080'
+set label '13955.0 GFLOPs/sec (FP32 Maximum)' at 2.0000000e+00,1.6746024e+04 left textcolor rgb '#000080'
+set label '7034.7 GFLOPs/sec (FP64 Maximum)' at 2.0000000e+00,8.4416640e+03 left textcolor rgb '#000080'
+set label 'L1 - 3043.6 GB/s' at 2.3332819e-01,8.5928798e+02 left rotate by 45 textcolor rgb '#800000'
+set label 'DRAM - 784.2 GB/s' at 4.0527557e-01,3.8455379e+02 left rotate by 45 textcolor rgb '#800000'
 plot \
-     (x <= 7.5447247e+00 ? 3.0403800e+03 * x : 1/0) lc 1 lw 2,\
-     (x <= 2.9239318e+01 ? 7.8452000e+02 * x : 1/0) lc 1 lw 2,\
-     (x >= 7.5447247e+00 ? 2.2938830e+04 : 1/0) lc 3 lw 2,\
-     (x >= 4.2057506e+00 ? 1.2787080e+04 : 1/0) lc 3 lw 2,\
-     (x >= 2.2695749e+00 ? 6.9003700e+03 : 1/0) lc 3 lw 2
+     (x <= 8.4745810e+00 ? 3.0435900e+03 * x : 1/0) lc 1 lw 2,\
+     (x <= 3.2891455e+01 ? 7.8419000e+02 * x : 1/0) lc 1 lw 2,\
+     (x >= 8.4745810e+00 ? 2.5793150e+04 : 1/0) lc 3 lw 2,\
+     (x >= 4.5850525e+00 ? 1.3955020e+04 : 1/0) lc 3 lw 2,\
+     (x >= 2.3113231e+00 ? 7.0347200e+03 : 1/0) lc 3 lw 2
