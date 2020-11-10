@@ -111,15 +111,79 @@ mpEDM~\cite{Watanakeesuntorn2020}
 Create a performance-portable implementation of EDM for both CPU and GPU
 platforms.
 
+\begin{itemize}
+\item Embedding needs to be done on the CPU which increases memory copies and degrades cache efficiency
+\item kNN kernel is not optimized for all kNN, relatively small number of
+    reference points, small k. ArrayFire’s kNN performs radix sort recursively
+\item ArrayFire’s CPU implementation of kNN search is not multithreaded. We
+    had a handwritten kNN kernel for CPU. Having different implementations for
+    CPU and GPU makes the maintenance cost higher
+\item Lookup function was not implemented on GPU (tried ArrayFire’s GFOR loops
+    but the performance was low)
+\end{itemize}
+
 \section{kEDM}
 
 \subsection{Overall Design}
+
+kEDM is a new implementation based on Kokkos.
+
+What is Kokkos?
+\begin{itemize}
+\item A programming model that abstracts
+\item Views: Multi-dimensional arrays with architecture-dependent layouts
+\item Execution polices (parallel patterns): for, reduce
+\item Hierarchical parallelism: Allows one to exploit the hierarchy in a
+    platform. Additionally, provides an interface to use high-speed
+    team/thread scratch memory.
+\end{itemize}
+
+Why Kokkos?
+\begin{itemize}
+    \item OpenMP and OpenACC need compiler support
+    \item Kokkos achieves performance close to native programming model (e.g. CUDA)
+    \item Rich ecosystem including various profilers (kooks-tools) and reference kernels  (Kokkos-kernels)
+    \item Participates in the ISO CPP standardization
+    \item Read this article: [https://uob-hpc.github.io/2020/05/05/choosing-models.html]
+    \item Cite this article: [https://ieeexplore.ieee.org/document/8945642]
+\end{itemize}
+
+Reduce CPU-GPU copies as much as possible. CPU-CPU copy happens only before
+and after the cross mapping
 
 \subsection{All kNN Kernel}
 
 NVIDIA CUB\footnote{\url{https://nvlabs.github.io/cub/}}
 
+Pairwise distance calculation:
+\begin{itemize}
+\item Perform time delayed embedding while calculating the pairwise distances
+    to reduce memory copy between CPU and GPU and improve cache hit.
+\item Use team scratch memory to cache one of the time series.
+\item \textbf{TODO} Loop interchange was needed to achieve full vectorization
+    on CPU (separate kernel for CPU and GPU)
+\end{itemize}
+
+Partial sort:
+\begin{itemize}
+\item Sort each row of the pairwise distance matrix in parallel. (Each team sorts one row. Threads within a team each finds the top-k elements from a chunk of a row).
+\item Use modified insertion sort algorithm shown in previous work to find the top-k elements.
+\item Top-k elements are held in thread scratch memory for faster update.
+\item \textbf{TODO} automatic tuning of team size
+\end{itemize}
+
 \subsection{Lookup kernel}
+
+\begin{itemize}
+\item Perform many lookups in parallel. (Each team performs lookups from one
+    source time series)
+\item Cache target time series in team scratch memory for faster random
+    access.
+\item Do not write out the predicted time series to global memory and
+    calculate Pearson’s correlation on-the-fly. Kokkos’ custom reduction
+    feature is used to implement parallel calculation of correlation
+    coefficient.
+\end{itemize}
 
 \section{Evaluation}
 
