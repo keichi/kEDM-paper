@@ -67,7 +67,7 @@
         Salk Institute for Biological Studies\\
         California, USA\\
         pao@salk.edu
-    } \\
+    }
 }
 
 \maketitle
@@ -104,6 +104,8 @@
 
 \section{Introduction}
 
+mpEDM~\cite{Watanakeesuntorn2020}
+
 \section{Background}
 
 Create a performance-portable implementation of EDM for both CPU and GPU
@@ -115,11 +117,19 @@ platforms.
 
 \subsection{All kNN Kernel}
 
+NVIDIA CUB\footnote{\url{https://nvlabs.github.io/cub/}}
+
 \subsection{Lookup kernel}
 
 \section{Evaluation}
 
 \subsection{Evaluation Environment}
+
+\begin{itemize}
+    \item Kokkos 3.2.00
+    \item AOCC 2.2.0
+    \item NVCC 10.1.105
+\end{itemize}
 
 \subsection{Comparison with mpEDM}
 
@@ -138,6 +148,8 @@ platforms.
 \end{figure}
 
 \subsection{Efficiency}
+
+Empirical Roofline Toolkit (ERT)\footnote{\url{https://bitbucket.org/berkeleylab/cs-roofline-toolkit/}}
 
 \begin{figure}
     \centering
@@ -171,5 +183,8 @@ platforms.
 
 \section*{Acknowledgements}
 This work was supported by JSPS KAKENHI Grant Number JP20K19808.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
 
 \end{document}
