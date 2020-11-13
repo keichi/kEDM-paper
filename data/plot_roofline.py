@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -81,10 +83,10 @@ ax.set_xlabel("Arithmetic Intensity [FLOPs/Byte]")
 ax.set_ylabel("Performance [GFLOP/s]")
 
 nx = 10000
-xmin = -2
-xmax = 3
-ymin = 100.0
-ymax = 20000
+xmin = -3
+xmax = 2
+ymin = 10.0
+ymax = 10000
 
 ax.set_xlim(10**xmin, 10**xmax)
 ax.set_ylim(ymin, ymax)

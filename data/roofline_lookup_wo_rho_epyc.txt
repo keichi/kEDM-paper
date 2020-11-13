@@ -1,0 +1,13 @@
+memroofs 6569.5 4034.7 1631.9 153.0
+mem_roof_names 'L1' 'L2' 'L3' 'DRAM'
+comproofs 3740 1870
+comp_roof_names 'FMA' 'No-FMA'
+
+# omit the following if only plotting roofs
+AI_DRAM 2.935 4.175 8.457 16.654 31.626
+AI_L3 0.404 0.462 0.324 0.268 0.264
+AI_L2 0.050 0.056 0.064 0.078 0.087
+AI_L1 0.011 0.012 0.015 0.024 0.026
+FLOPS 49.424862 65.013781 91.007956 130.482649 148.412140
+
+labels 'E=1' 'E=2' 'E=5' 'E=10' 'E=20'

@@ -1,5 +1,7 @@
 \documentclass[conference]{IEEEtran}
 
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\usepackage{algorithmic}
 \usepackage{booktabs}
 \usepackage{cite}
 \usepackage[bottom]{footmisc}
@@ -9,6 +11,7 @@
 \usepackage{multicol}
 \usepackage{newtxtext}
 \usepackage{newtxmath}
+\usepackage{textgreek}
 \usepackage{url}
 \RequirePackage[l2tabu, orthodox]{nag}
 
@@ -104,9 +107,27 @@
 
 \section{Introduction}
 
-mpEDM~\cite{Watanakeesuntorn2020}
+Empirical Dynamical Modeling (EDM) is a...
+
+We have been developing mpEDM~\cite{mpedm}, a massively parallel
+implementation of EDM.
 
 \section{Background}
+
+Two major problems with mpEDM: (performance) portability and flexibility.
+
+\subsection{Performance portability}
+
+ArrayFire's CPU implementation is not multi threaded.
+
+Hence we used ArrayFire's implementation on GPU and our implementation on CPU.
+
+\subsection{Flexibility}
+
+Could not modify or tune kNN kernel. For example, embedding on-the-fly,
+partial sorting algorithm optimized for small k.
+
+Could not port lookups on GPU.
 
 Create a performance-portable implementation of EDM for both CPU and GPU
 platforms.
@@ -121,6 +142,33 @@ platforms.
 \item Lookup function was not implemented on GPU (tried ArrayFire’s GFOR loops
     but the performance was low)
 \end{itemize}
+
+
+\begin{algorithm}[t]
+    \SetAlgoLined
+    \DontPrintSemicolon
+    \KwIn{Dataset $ts$ ($N$ time series of length $L$), maximum embedding dimension $E_{max}$}
+    \KwOut{$N \times N$ causal map \textrho}
+    \tcp{Phase 1: Simplex projection}
+    \For{$i \leftarrow 1$ \KwTo $N$}{
+        \tcp{Same as cppEDM (Algorithm~\ref{pseudo:cppedm})}
+    }
+    \BlankLine
+    \tcp{Phase 2: CCM}
+    \For{$i \leftarrow 1$ \KwTo $N$}{
+        \For{$E \leftarrow 1$ \KwTo $E_{max}$}{
+            $indices[E], distances[E] \leftarrow$ kNN$(ts[i], ts[i], E)$\;
+            $distances\leftarrow$normalize$(distances)$\;
+        }
+        \For{$j \leftarrow 1$ \KwTo $N$}{
+            $E_j \leftarrow optE[j]$\;
+            $prediction \leftarrow$ lookup$(indices[E_j], distances[E_j], ts[j], E_j)$\;
+            \textrho$[i, j] \leftarrow$ corrcoef$(ts[j], prediction)$\;
+        }
+    }
+    \caption{Causal Inference in mpEDM}
+    \label{pseudo:mpedm}
+\end{algorithm}
 
 \section{kEDM}
 
@@ -144,12 +192,17 @@ Why Kokkos?
     \item Kokkos achieves performance close to native programming model (e.g. CUDA)
     \item Rich ecosystem including various profilers (kooks-tools) and reference kernels  (Kokkos-kernels)
     \item Participates in the ISO CPP standardization
-    \item Read this article: [https://uob-hpc.github.io/2020/05/05/choosing-models.html]
-    \item Cite this article: [https://ieeexplore.ieee.org/document/8945642]
 \end{itemize}
 
 Reduce CPU-GPU copies as much as possible. CPU-CPU copy happens only before
 and after the cross mapping
+
+\begin{figure*}
+    \centering
+    \includegraphics{figs/xmap_overview}
+    \caption{Overview of EDM cross mapping}%
+    \label{fig:architecture}
+\end{figure*}
 
 \subsection{All kNN Kernel}
 
@@ -182,18 +235,24 @@ Partial sort:
 \item Do not write out the predicted time series to global memory and
     calculate Pearson’s correlation on-the-fly. Kokkos’ custom reduction
     feature is used to implement parallel calculation of correlation
-    coefficient.
+    coefficient. Algorithm is based on~\cite{Schubert2018}
 \end{itemize}
 
 \section{Evaluation}
 
 \subsection{Evaluation Environment}
 
-\begin{itemize}
-    \item Kokkos 3.2.00
-    \item AOCC 2.2.0
-    \item NVCC 10.1.105
-\end{itemize}
+% use table?
+
+We evaluated kEDM on two compute servers installed at the Salk Institute: (1)
+Ika and (2) Aori.
+Ika is equipped with two sockets of 20-core Intel Xeon Gold 6148 CPUs, one
+NVIDIA V100 PCIe card and 376 GiB of RAM. Aori is equipped with two sockets of
+64-core AMD EPYC 7742 CPUs and 1 TiB of RAM.
+
+kEDM was built with Kokkos 3.2.00 on both machines. On Aori, we used AMD
+Optimizing C/C++ Compiler (AOCC) 2.2.0, a fork of Clang by AMD. On Ika, we
+used NVIDIA CUDA Compiler (NVCC) 10.1.
 
 \subsection{Comparison with mpEDM}
 
@@ -213,7 +272,17 @@ Partial sort:
 
 \subsection{Efficiency}
 
-Empirical Roofline Toolkit (ERT)\footnote{\url{https://bitbucket.org/berkeleylab/cs-roofline-toolkit/}}
+To assess the efficiency of our implementation, we conducted a roofline
+analysis~\cite{Williams2008} of our kernels. The compute and memory ceilings
+on each platform were measured using the Empirical Roofline Toolkit (ERT)\footnote{\url{https://bitbucket.org/berkeleylab/cs-roofline-toolkit/}} 1.1.0.
+Since ERT fails to measure the L1 cache bandwidth on GPUs, we used the
+theoretical peak performance instead. We followed the methodology presented
+in~\cite{Yang2020a,Yang2020b} to measure the arithmetic intensity and the
+attained FLOP/s. Nvprof 10.1 and likwid~\cite{Treibig2010} 5.0.1 were used to
+collect the required metrics on GPU and CPU, respectively.
+
+% 1.38*80*32*4/1024 = 13.8 TiB/s
+% (frequency)*(# of SMs)*(bank size)*(bank width)
 
 \begin{figure}
     \centering

@@ -1,4 +1,4 @@
-memroofs 14336 2996.77 828.758
+memroofs 14131 3043.59 784.19
 mem_roof_names 'L1' 'L2' 'HBM'
 comproofs 13955 6977.5
 comp_roof_names 'FMA' 'No-FMA'
