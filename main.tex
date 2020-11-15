@@ -107,7 +107,11 @@
 
 \section{Introduction}
 
-Empirical Dynamical Modeling (EDM) is a...
+Empirical Dynamical Modeling (EDM)~\cite{Chang2017} is a...
+
+\cite{Ma2017}
+
+brain science~\cite{Natsukawa2017}
 
 We have been developing mpEDM~\cite{mpedm}, a massively parallel
 implementation of EDM.
@@ -143,38 +147,30 @@ platforms.
     but the performance was low)
 \end{itemize}
 
-
-\begin{algorithm}[t]
+\begin{algorithm}
     \SetAlgoLined
     \DontPrintSemicolon
-    \KwIn{Dataset $ts$ ($N$ time series of length $L$), maximum embedding dimension $E_{max}$}
-    \KwOut{$N \times N$ causal map \textrho}
-    \tcp{Phase 1: Simplex projection}
-    \For{$i \leftarrow 1$ \KwTo $N$}{
-        \tcp{Same as cppEDM (Algorithm~\ref{pseudo:cppedm})}
-    }
-    \BlankLine
-    \tcp{Phase 2: CCM}
-    \For{$i \leftarrow 1$ \KwTo $N$}{
-        \For{$E \leftarrow 1$ \KwTo $E_{max}$}{
-            $indices[E], distances[E] \leftarrow$ kNN$(ts[i], ts[i], E)$\;
-            $distances\leftarrow$normalize$(distances)$\;
-        }
-        \For{$j \leftarrow 1$ \KwTo $N$}{
-            $E_j \leftarrow optE[j]$\;
-            $prediction \leftarrow$ lookup$(indices[E_j], distances[E_j], ts[j], E_j)$\;
-            \textrho$[i, j] \leftarrow$ corrcoef$(ts[j], prediction)$\;
+    \KwIn{$library$ and $target$ time series, embedding dimension $E$, time lag \texttau}
+    \KwOut{Arrays $diatances$ and $indices$ for lookup}
+    \For{$i \leftarrow 1$ \KwTo $L$}{
+        $distances(i, :) \leftarrow 0$\;
+        \For{$j \leftarrow 1$ \KwTo $L$}{
+            \For{$k \leftarrow 1$ \KwTo $E$}{
+                $indices(i, j) \leftarrow j$\;
+                $distances(i, j) \leftarrow distances(i, j) + (target(k $\texttau$ + i) - library(k $\texttau$ + j))^2$\;
+            }
         }
     }
-    \caption{Causal Inference in mpEDM}
-    \label{pseudo:mpedm}
+    \caption{Pairwise distances}
+    \label{pseudo:knn_cpu}
 \end{algorithm}
 
 \section{kEDM}
 
 \subsection{Overall Design}
 
-kEDM is a new implementation based on Kokkos.
+kEDM\footnote{\url{https://github.com/keichi/kEDM}} is a new implementation
+based on Kokkos.
 
 What is Kokkos?
 \begin{itemize}
@@ -204,7 +200,7 @@ and after the cross mapping
     \label{fig:architecture}
 \end{figure*}
 
-\subsection{All kNN Kernel}
+\subsection{All k-Nearest Neighbors Kernel}
 
 NVIDIA CUB\footnote{\url{https://nvlabs.github.io/cub/}}
 
@@ -249,7 +245,6 @@ Ika and (2) Aori.
 Ika is equipped with two sockets of 20-core Intel Xeon Gold 6148 CPUs, one
 NVIDIA V100 PCIe card and 376 GiB of RAM. Aori is equipped with two sockets of
 64-core AMD EPYC 7742 CPUs and 1 TiB of RAM.
-
 kEDM was built with Kokkos 3.2.00 on both machines. On Aori, we used AMD
 Optimizing C/C++ Compiler (AOCC) 2.2.0, a fork of Clang by AMD. On Ika, we
 used NVIDIA CUDA Compiler (NVCC) 10.1.
@@ -258,14 +253,14 @@ used NVIDIA CUDA Compiler (NVCC) 10.1.
 
 \begin{figure}
     \centering
-    \includegraphics{figs/breakdown_v100}
+    \includegraphics{figs/breakdown_knn_v100}
     \caption{Breakdown of kNN runtime on V100}%
     \label{fig:architecture}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics{figs/breakdown_epyc}
+    \includegraphics{figs/breakdown_knn_epyc}
     \caption{Breakdown of kNN runtime on EPYC 7742}%
     \label{fig:architecture}
 \end{figure}
@@ -307,15 +302,15 @@ collect the required metrics on GPU and CPU, respectively.
 
 \begin{figure}
     \centering
-    \includegraphics{figs/roofline_lookup_v100}
-    \caption{Roofline analysis of lookup kernel on V100}%
+    \includegraphics{figs/roofline_distances_epyc}
+    \caption{Roofline analysis of pairwise distance kernel on EPYC 7742}%
     \label{fig:architecture}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics{figs/roofline_distances_epyc}
-    \caption{Roofline analysis of pairwise distance kernel on EPYC 7742}%
+    \includegraphics{figs/roofline_lookup_v100}
+    \caption{Roofline analysis of lookup kernel on V100}%
     \label{fig:architecture}
 \end{figure}
 
