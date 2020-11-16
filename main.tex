@@ -1,16 +1,16 @@
 \documentclass[conference]{IEEEtran}
 
 \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
-\usepackage{algorithmic}
 \usepackage{booktabs}
-\usepackage{caption}
+\usepackage[hang]{caption}
 \usepackage{cite}
+\usepackage{flushend}
 \usepackage[bottom,hang]{footmisc}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
+\usepackage{icomma}
 \usepackage{listings}
-\usepackage{multicol}
 \usepackage{newtxtext}
 \usepackage{newtxmath}
 \usepackage{textgreek}
@@ -57,11 +57,14 @@
 
 \begin{document}
 
+% algorithme2
+\SetKwFor{PFor}{parallel for}{do}{end}
+
 \title{kEDM: A Performance-portable Implementation of Empirical Dynamical Modeling}
 
 \author{%
     \IEEEauthorblockN{%
-        Keichi Takahashi,\\ Wassapon Watanakeesuntorn,\\Kohei Ichikawa
+        Keichi Takahashi,\\Wassapon Watanakeesuntorn,\\Kohei Ichikawa
     } \\
     \IEEEauthorblockA{%
         Nara Institute of Science and Technology\\
@@ -141,12 +144,12 @@ platforms.
     \centering
     \includegraphics{figs/xmap_overview}
     \caption{Overview of EDM cross mapping}%
-    \label{fig:architecture}
+    \label{fig:edm}
 \end{figure*}
 
 \subsection{Empirical Dynamical Modeling (EDM)}
 
-\subsection{Challenges in mpEDM}
+\subsection{Challenges in mpEDM}\label{sec:challenges}
 
 This subsection discusses the two major challenges in mpEDM: performance
 portability and flexibility.
@@ -230,7 +233,7 @@ In this example, the pattern is parallel-for.
 
 \begin{lstlisting}[caption={Basic data parallel loop},label={lst:basic}]
 Kokkos::parallel_for(RangePolicy<ExecSpace>(N),
-KOKKOS_LAMBDA(const int i) {
+KOKKOS_LAMBDA(int i) {
     y(i) = a * x(i) + y(i);
 });
 \end{lstlisting}
@@ -241,11 +244,18 @@ parallelism.
 \begin{lstlisting}[caption={Hierarchical data parallel loop},label={lst:hierarchical}]
 parallel_for(TeamPolicy<ExecSpace>(M),
 KOKKOS_LAMBDA(const member_type &member) {
-    const int i = member.team_rank();
+    int i = member.team_rank();
+    float sum = 0.0f;
+
     parallel_reduce(TeamThreadRange(member, N),
-    [=] (const int j, float &tmp) {
+    [=] (int j, float &tmp) {
         tmp += A(i, j) * x(j)
-    }, y(i));
+    }, sum);
+
+    single(PerTeam(member),
+    [=] () {
+        y(i) = sum;
+    });
 });
 \end{lstlisting}
 
@@ -267,48 +277,46 @@ fixed at compile time, thereby making sure that accessing incompatible memory
 at runtime does not happen.
 
 Prior to implementing kEDM, we have examined a number of popular performance
-portability frameworks. This includes OpenMP, OpenACC, OpenCL and SYCL.
-We chose Kokkos because it achieves~\cite{Deakin2019}
-SYCL and OpenMP are attractive choices as they have grown rapidly over the
-last few years in terms of hardware coverage and delivered performance.
-However, still Kokkos is at this point of time.
-
-Why Kokkos?
-\begin{itemize}
-    \item OpenMP and OpenACC need compiler support
-    \item Kokkos achieves performance close to native programming model (e.g. CUDA)
-    \item Rich ecosystem including various profilers (kooks-tools) and reference kernels  (Kokkos-kernels)
-    \item Participates in the ISO CPP standardization
-\end{itemize}
+portability frameworks. These include OpenMP, OpenACC, OpenCL and SYCL\@. We
+chose Kokkos  because recent studies~\cite{Martineau2017, Deakin2019, Deakin2020}
+have shown that it delivers portable performance on a large set of devices
+compared to its alternatives. SYCL and OpenMP are attractive choices as they
+have grown rapidly over the last few years in terms of hardware coverage and
+delivered performance. However, we still consider them immature compared to
+Kokkos at the point of writing this paper.
 
 \subsection{All k-Nearest Neighbors Kernel}
+
+We compose the All kNN search from two kernels: pairwise distance calculation
+and partial sort.
+
+As discussed in Section~\ref{sec:challenges}, performing the time-delayed
+embedding into state space and then calculating the pairwise distances is
+inefficient since it increases memory access. Instead, we perform the time
+delayed embedding and distance calculation at the same time.
+
+Algorithm~\ref{alg:distances} shows the pairwise distance calculation algorithm
+in kEDM\@. A The outer most $i$-loop is parallelized using team parallel loop and
+the $j$-loop is parallelized using intra-thread parallel loop. In addition, we
+use the team-local scratch memory to cache $\mathrm{library}(k $\texttau$ + i)$
+as it its referenced $LE$ times in each $i$-loop iteration.
 
 \begin{algorithm}
     \SetAlgoLined
     \DontPrintSemicolon
-    \KwIn{library and target time series, embedding dimension $E$, time lag \texttau}
-    \KwOut{Arrays distances and indices for lookup}
-    \For{$i \leftarrow 1$ \KwTo $L$}{
-        $\mathrm{distances}(i, :) \leftarrow 0$\;
-        \For{$j \leftarrow 1$ \KwTo $L$}{
+    \KwIn{library time series, embedding dimension $E$, time lag \texttau}
+    \KwOut{Pairwise distances}
+    \PFor{$i \leftarrow 1$ \KwTo $L$}{
+        \PFor{$j \leftarrow 1$ \KwTo $L$}{
+            $\mathrm{distances}(i, j) \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E$}{
-                $\mathrm{indices}(i, j) \leftarrow j$\;
-                $\mathrm{distances}(i, j) \leftarrow \mathrm{distances}(i, j) + (\mathrm{target}(k $\texttau$ + i) - \mathrm{library}(k $\texttau$ + j))^2$\;
+                $\mathrm{distances}(i, j) \leftarrow \mathrm{distances}(i, j) + (\mathrm{library}(k $\texttau$ + i) - \mathrm{library}(k $\texttau$ + j))^2$\;
             }
         }
     }
-    \caption{Pairwise distances}
-    \label{pseudo:knn_cpu}
+    \caption{Pairwise distances}%
+    \label{alg:distances}
 \end{algorithm}
-
-Pairwise distance calculation:
-\begin{itemize}
-\item Perform time delayed embedding while calculating the pairwise distances
-    to reduce memory copy between CPU and GPU and improve cache hit.
-\item Use team scratch memory to cache one of the time series.
-\item \textbf{TODO} Loop interchange was needed to achieve full vectorization
-    on CPU (separate kernel for CPU and GPU)
-\end{itemize}
 
 Partial sort:
 \begin{itemize}
@@ -317,6 +325,26 @@ Partial sort:
 \item Top-k elements are held in thread scratch memory for faster update.
 \item \textbf{TODO} automatic tuning of team size
 \end{itemize}
+
+% https://github.com/vincentfpgarcia/kNN-CUDA
+
+\begin{algorithm}
+    \SetAlgoLined
+    \DontPrintSemicolon
+    \KwIn{distance matrix, top-$k$}
+    \KwOut{Partial sort}
+    \PFor{$i \leftarrow 1$ \KwTo $L$}{
+        \PFor{$j \leftarrow 1$ \KwTo $L$}{
+            $\mathrm{distances}(i, j) \leftarrow 0$\;
+            \For{$k \leftarrow 1$ \KwTo $E$}{
+                $\mathrm{distances}(i, j) \leftarrow \mathrm{distances}(i, j) + (\mathrm{library}(k $\texttau$ + i) - \mathrm{library}(k $\texttau$ + j))^2$\;
+            }
+        }
+    }
+    \caption{Partial sort}%
+    \label{alg:sort}
+\end{algorithm}
+
 
 \subsection{Lookup kernel}
 
@@ -351,29 +379,29 @@ used NVIDIA CUDA Compiler (NVCC) 10.1.
 \begin{figure}
     \centering
     \includegraphics{figs/breakdown_knn_v100}
-    \caption{Breakdown of kNN runtime on V100}%
-    \label{fig:architecture}
+    \caption{Breakdown of kNN runtime on V100 ($L$=10,000)}%
+    \label{fig:breakdown-knn-v100}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics{figs/breakdown_knn_epyc}
-    \caption{Breakdown of kNN runtime on EPYC 7742}%
-    \label{fig:architecture}
+    \caption{Breakdown of kNN runtime on EPYC 7742 ($L$=10,000)}%
+    \label{fig:breakdown-knn-epyc}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics{figs/runtime_lookup_epyc}
-    \caption{Breakdown of lookup runtime on EPYC 7742}%
-    \label{fig:architecture}
+    \caption{Runtime of lookups on EPYC 7742 ($L$=10,000, $N$=10,000)}%
+    \label{fig:breakdown-lookup-epyc}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics{figs/runtime_lookup_v100}
-    \caption{Breakdown of lookup runtime on V100}%
-    \label{fig:architecture}
+    \caption{Runtime of lookups on V100 ($L$=10,000, $N$=10,000)}%
+    \label{fig:breakdown-lookup-v100}
 \end{figure}
 
 \subsection{Efficiency}
@@ -393,35 +421,36 @@ collect the required metrics on GPU and CPU, respectively.
 \begin{figure}
     \centering
     \includegraphics{figs/roofline_distances_v100}
-    \caption{Roofline analysis of pairwise distance kernel on V100}%
-    \label{fig:architecture}
+    \caption{Roofline analysis of pairwise distance kernel on V100 ($L$=10,000)}%
+    \label{fig:roofline-distances-v100}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics{figs/roofline_distances_epyc}
-    \caption{Roofline analysis of pairwise distance kernel on EPYC 7742}%
-    \label{fig:architecture}
+    \caption{Roofline analysis of pairwise distance kernel on EPYC 7742 ($L$=10,000)}%
+    \label{fig:roofline-distances-epyc}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics{figs/roofline_lookup_v100}
-    \caption{Roofline analysis of lookup kernel on V100}%
-    \label{fig:architecture}
+    \caption{Roofline analysis of lookup kernel on V100 ($L$=10,000, $N$=10,000)}%
+    \label{fig:roofline-lookup-v100}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics{figs/roofline_lookup_epyc}
-    \caption{Roofline analysis of lookup kernel on EPYC 7742}%
-    \label{fig:architecture}
+    \caption{Roofline analysis of lookup kernel on EPYC 7742 ($L$=10,000, $N$=10,000)}%
+    \label{fig:roofline-lookup-eypc}
 \end{figure}
 
 \section{Conclusion \& Future Work}
 
 \section*{Acknowledgements}
-This work was supported by JSPS KAKENHI Grant Number JP20K19808.
+This work was supported by JSPS KAKENHI Grant Number JP20K19808 (KT) and an
+Innovation grant by the Kavli Institute for Brain and Mind (GMP).
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
