@@ -3,8 +3,10 @@
 \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
 \usepackage{algorithmic}
 \usepackage{booktabs}
+\usepackage{caption}
 \usepackage{cite}
-\usepackage[bottom]{footmisc}
+\usepackage[bottom,hang]{footmisc}
+\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{listings}
@@ -13,28 +15,41 @@
 \usepackage{newtxmath}
 \usepackage{textgreek}
 \usepackage{url}
+\usepackage{xcolor}
 \RequirePackage[l2tabu, orthodox]{nag}
 
 % Allow PDF 1.7 documents to be included with \includegraphics
 \pdfminorversion=7
 
-% listing
+% Suppress "multiple pdfs with page group included in a single page" warning
+\pdfsuppresswarningpagegroup=1
+
+% Define colors for code highlighting
+\definecolor{color-bg}{HTML}{F6F8FA}
+\definecolor{color-keyword}{HTML}{D73A49}
+\definecolor{color-ident}{HTML}{005CC5}
+\definecolor{color-string}{HTML}{032F62}
+\definecolor{color-comment}{HTML}{6A737D}
+
+% Listing
 \lstset{%
-  language={C},
+  language={C++},
   basicstyle={\small\ttfamily},%
+  backgroundcolor=\color{color-bg},%
   identifierstyle={\small\ttfamily},%
-  commentstyle={\small\itshape},%
-  keywordstyle={\small\bfseries},%
-  ndkeywordstyle={\small\ttfamily},%
-  stringstyle={\small\ttfamily},%
-  frame={tb},%
+  commentstyle={\small\itshape\color{color-comment}},%
+  keywordstyle={\small\bfseries\color{color-ident}},%
+  % ndkeywordstyle={\small\ttfamily},%
+  stringstyle={\small\ttfamily\color{color-string}},%
+  frame={trbl},%
+  frameround={tttt},%
   breaklines=true,%
   columns=[l]{fullflexible},%
   numbers=left,%
   numberstyle={\scriptsize},%
   stepnumber=1,%
   numbersep=1em,%
-  lineskip=-0.5ex,%
+  % lineskip=-0.5ex,%
   mathescape,%
   xleftmargin=2em,%
   framexleftmargin=1.5em,%
@@ -100,8 +115,7 @@
     congestion and potentially improve the performance of applications.
 \end{abstract}
 
-\begin{IEEEkeywords}
-    Simulation, Profiling, Interconnect, Message Passing Interface, Software
+\begin{IEEEkeywords} Simulation, Profiling, Interconnect, Message Passing Interface, Software
     Defined Networking
 \end{IEEEkeywords}
 
@@ -116,71 +130,148 @@ brain science~\cite{Natsukawa2017}
 We have been developing mpEDM~\cite{mpedm}, a massively parallel
 implementation of EDM.
 
-\section{Background}
-
-Two major problems with mpEDM: (performance) portability and flexibility.
-
-\subsection{Performance portability}
-
-ArrayFire's CPU implementation is not multi threaded.
-
-Hence we used ArrayFire's implementation on GPU and our implementation on CPU.
-
-\subsection{Flexibility}
-
-Could not modify or tune kNN kernel. For example, embedding on-the-fly,
-partial sorting algorithm optimized for small k.
-
-Could not port lookups on GPU.
-
 Create a performance-portable implementation of EDM for both CPU and GPU
 platforms.
 
-\begin{itemize}
-\item Embedding needs to be done on the CPU which increases memory copies and degrades cache efficiency
-\item kNN kernel is not optimized for all kNN, relatively small number of
-    reference points, small k. ArrayFire’s kNN performs radix sort recursively
-\item ArrayFire’s CPU implementation of kNN search is not multithreaded. We
-    had a handwritten kNN kernel for CPU. Having different implementations for
-    CPU and GPU makes the maintenance cost higher
-\item Lookup function was not implemented on GPU (tried ArrayFire’s GFOR loops
-    but the performance was low)
-\end{itemize}
+\clearpage
 
-\begin{algorithm}
-    \SetAlgoLined
-    \DontPrintSemicolon
-    \KwIn{$library$ and $target$ time series, embedding dimension $E$, time lag \texttau}
-    \KwOut{Arrays $diatances$ and $indices$ for lookup}
-    \For{$i \leftarrow 1$ \KwTo $L$}{
-        $distances(i, :) \leftarrow 0$\;
-        \For{$j \leftarrow 1$ \KwTo $L$}{
-            \For{$k \leftarrow 1$ \KwTo $E$}{
-                $indices(i, j) \leftarrow j$\;
-                $distances(i, j) \leftarrow distances(i, j) + (target(k $\texttau$ + i) - library(k $\texttau$ + j))^2$\;
-            }
-        }
-    }
-    \caption{Pairwise distances}
-    \label{pseudo:knn_cpu}
-\end{algorithm}
+\section{Background}
+
+\begin{figure*}
+    \centering
+    \includegraphics{figs/xmap_overview}
+    \caption{Overview of EDM cross mapping}%
+    \label{fig:architecture}
+\end{figure*}
+
+\subsection{Empirical Dynamical Modeling (EDM)}
+
+\subsection{Challenges in mpEDM}
+
+This subsection discusses the two major challenges in mpEDM: performance
+portability and flexibility.
+
+\subsubsection{Performance portability}
+
+mpEDM was based on ArrayFire~\cite{Malcolm2012}, a general purpose library for
+GPU computing. We chose ArrayFire primarily for its productivity and
+portability. ArrayFire provides CUDA and OpenCL backends to run on OpenCL
+devices. It also provides a CPU backend. Unfortunately, most of the functions
+provided by the CPU backend are neither multi-threaded or vectorized. For this
+reason, we implemented our implementation for CPU\@.
+
+As a result, mpEDM had a ArrayFire-based GPU implementation and a CPU-based
+implementation of EDM, doubling the maintenance cost. Considering the
+diversifying target hardware, we wish a unified implementation that achieves
+consistent and reasonable performance across a diverse set of hardware.
+
+\subsubsection{Flexibility}
+
+Since mpEDM was relying on ArrayFire's k-nearest neighbor search function
+(\texttt{nearestNeighbour()}), we were unable to modify nor tune the k-NN
+search to suit our use case and missed opportunities for further optimization.
+ArrayFire's nearest neighbor function accepts two input arrays, which are the
+reference and query points, and returns a list of closest reference points and
+their distances for each query point. This interface is simple and
+easy-to-use. However, when applying to EDM, the time-delayed embedding needs
+to be performed on CPU in advance and passed to ArrayFire. This hinders
+performance because it increases the amount of data that needs to be read from
+GPU memory.
+
+Another potential optimization opportunity is the partial sort function
+\texttt{topk()} invoked in the k-NN search. ArrayFire uses NVIDIA's
+CUB\footnote{\url{https://nvlabs.github.io/cub/}} library to implement partial
+sort. CUB is a highly optimized library and being used by other libraries such
+as Thrust\footnote{\url{https://github.com/NVIDIA/thrust}}. ArrayFire's
+\texttt{topk()} function divides the input array into equal sized sub-array
+and then calls CUB's \texttt{BlockRadixSort()} function to sort each
+sub-array. It then extracts the top-$k$ elements from each sub-array and
+concatenates them into a new array. This is recursively repeated until the
+global top-$k$ elements are found. Even though this implementation is
+well-optimized, it may not be optimal for EDM since the targeted $k$ is
+relatively small ($\leq 20$).
+
+Finally, we were unable to implement lookups efficiently on GPU using
+ArrayFire. ArrayFire provides a construct called \textit{GFOR} that allows one
+to perform embarrassingly parallel for-loops in parallel. Although we were
+able to implement lookups using GFOR, the attained performance was poor. It
+was also challenging to reduce memory consumption and memory copies because
+ArrayFire implicitly allocates, deallocates and copies arrays.
 
 \section{kEDM}
 
 \subsection{Overall Design}
 
-kEDM\footnote{\url{https://github.com/keichi/kEDM}} is a new implementation
-based on Kokkos.
+kEDM\footnote{\url{https://github.com/keichi/kEDM}} is a performance-portable
+implementation of EDM based on Kokkos.
 
-What is Kokkos?
-\begin{itemize}
-\item A programming model that abstracts
-\item Views: Multi-dimensional arrays with architecture-dependent layouts
-\item Execution polices (parallel patterns): for, reduce
-\item Hierarchical parallelism: Allows one to exploit the hierarchy in a
+\subsection{Kokkos}
+
+Kokkos~\cite{Edwards2014} is a performance portability framework developed at
+the Sandia National Laboratories. It provides an abstraction layer that hides
+the differences between low-level programming models such as OpenMP, CUDA,
+ROCm and exposes a high-level C++ interface to the programmer. Using Kokkos,
+it is possible to develop a cross-platform and performance-portable
+application on a single source code base.
+
+In Kokkos, the programmer specifies (1) the parallel pattern, (2) execution
+policy, and (3) computational body of a loop. The parallel pattern includes
+parallel-for, parallel-reduce and parallel-scan in the current release of
+Kokkos. The execution policy defines how a loop is executed.
+\texttt{RangePolicy}
+Finally, the computational body is given as a C++ 11 lambda function.
+
+Hierarchical parallelism: Allows one to exploit the hierarchy in a
     platform. Additionally, provides an interface to use high-speed
     team/thread scratch memory.
-\end{itemize}
+
+Listing~\ref{lst:basic} shows a AXPY kernel implemented in Kokkos.
+In this example, the pattern is parallel-for.
+
+\begin{lstlisting}[caption={Basic data parallel loop},label={lst:basic}]
+Kokkos::parallel_for(RangePolicy<ExecSpace>(N),
+KOKKOS_LAMBDA(const int i) {
+    y(i) = a * x(i) + y(i);
+});
+\end{lstlisting}
+
+Listing~\ref{lst:hierarchical} shows a GEMV kernel using hierarchical
+parallelism.
+
+\begin{lstlisting}[caption={Hierarchical data parallel loop},label={lst:hierarchical}]
+parallel_for(TeamPolicy<ExecSpace>(M),
+KOKKOS_LAMBDA(const member_type &member) {
+    const int i = member.team_rank();
+    parallel_reduce(TeamThreadRange(member, N),
+    [=] (const int j, float &tmp) {
+        tmp += A(i, j) * x(j)
+    }, y(i));
+});
+\end{lstlisting}
+
+\textit{View} is the fundamental data type in Kokkos and represents a
+multidimensional array. Views are allocated explicitly by the user and
+deallocated automatically by Kokkos using reference counting. A notable
+feature of Kokkos view is that the layout of the multidimensional array is
+parameterized. This frees programmers from tedious and error-prone index
+calculation. Each view is associated to a memory space, an abstraction of
+where the data resides. This includes Host, CUDA, CudaUVM, etc.
+
+Execution space is an abstraction of where the code runs. The latest stable
+release of Kokkos at the time of writing this paper supports Serial, OpenMP,
+OpenMP Target, CUDA, ROCm, Pthread, HIP and HPX\@. A SYCL backend is in
+development.
+
+Both execution space and memory space are given as template parameters and
+fixed at compile time, thereby making sure that accessing incompatible memory
+at runtime does not happen.
+
+Prior to implementing kEDM, we have examined a number of popular performance
+portability frameworks. This includes OpenMP, OpenACC, OpenCL and SYCL.
+We chose Kokkos because it achieves~\cite{Deakin2019}
+SYCL and OpenMP are attractive choices as they have grown rapidly over the
+last few years in terms of hardware coverage and delivered performance.
+However, still Kokkos is at this point of time.
 
 Why Kokkos?
 \begin{itemize}
@@ -190,19 +281,25 @@ Why Kokkos?
     \item Participates in the ISO CPP standardization
 \end{itemize}
 
-Reduce CPU-GPU copies as much as possible. CPU-CPU copy happens only before
-and after the cross mapping
-
-\begin{figure*}
-    \centering
-    \includegraphics{figs/xmap_overview}
-    \caption{Overview of EDM cross mapping}%
-    \label{fig:architecture}
-\end{figure*}
-
 \subsection{All k-Nearest Neighbors Kernel}
 
-NVIDIA CUB\footnote{\url{https://nvlabs.github.io/cub/}}
+\begin{algorithm}
+    \SetAlgoLined
+    \DontPrintSemicolon
+    \KwIn{library and target time series, embedding dimension $E$, time lag \texttau}
+    \KwOut{Arrays distances and indices for lookup}
+    \For{$i \leftarrow 1$ \KwTo $L$}{
+        $\mathrm{distances}(i, :) \leftarrow 0$\;
+        \For{$j \leftarrow 1$ \KwTo $L$}{
+            \For{$k \leftarrow 1$ \KwTo $E$}{
+                $\mathrm{indices}(i, j) \leftarrow j$\;
+                $\mathrm{distances}(i, j) \leftarrow \mathrm{distances}(i, j) + (\mathrm{target}(k $\texttau$ + i) - \mathrm{library}(k $\texttau$ + j))^2$\;
+            }
+        }
+    }
+    \caption{Pairwise distances}
+    \label{pseudo:knn_cpu}
+\end{algorithm}
 
 Pairwise distance calculation:
 \begin{itemize}
@@ -245,7 +342,7 @@ Ika and (2) Aori.
 Ika is equipped with two sockets of 20-core Intel Xeon Gold 6148 CPUs, one
 NVIDIA V100 PCIe card and 376 GiB of RAM. Aori is equipped with two sockets of
 64-core AMD EPYC 7742 CPUs and 1 TiB of RAM.
-kEDM was built with Kokkos 3.2.00 on both machines. On Aori, we used AMD
+kEDM was built with Kokkos 3.2 on both machines. On Aori, we used AMD
 Optimizing C/C++ Compiler (AOCC) 2.2.0, a fork of Clang by AMD. On Ika, we
 used NVIDIA CUDA Compiler (NVCC) 10.1.
 
