@@ -137,16 +137,14 @@ implementation of EDM.
 Create a performance-portable implementation of EDM for both CPU and GPU
 platforms.
 
-\clearpage
-
-\section{Background}
-
 \begin{figure*}
     \centering
     \includegraphics{figs/xmap_overview}
     \caption{Overview of EDM cross mapping}%
     \label{fig:edm}
 \end{figure*}
+
+\section{Background}
 
 \subsection{Empirical Dynamical Modeling (EDM)}
 
@@ -212,25 +210,38 @@ implementation of EDM based on Kokkos.
 \subsection{Kokkos}
 
 Kokkos~\cite{Edwards2014} is a performance portability framework developed at
-the Sandia National Laboratories. It provides an abstraction layer that hides
-the differences between low-level programming models such as OpenMP, CUDA,
-ROCm and exposes a high-level C++ interface to the programmer. Using Kokkos,
-it is possible to develop a cross-platform and performance-portable
-application on a single source code base.
+the Sandia National Laboratories. It abstracts away the differences between
+low-level programming models such as OpenMP, CUDA, ROCm and exposes a
+high-level C++ interface to the developer. Kokkos allows developers to build a
+cross-platform and performance-portable application on a single source code
+base.
 
-In Kokkos, the programmer specifies (1) the parallel pattern, (2) execution
-policy, and (3) computational body of a loop. The parallel pattern includes
-parallel-for, parallel-reduce and parallel-scan in the current release of
-Kokkos. The execution policy defines how a loop is executed.
-\texttt{RangePolicy}
-Finally, the computational body is given as a C++ 11 lambda function.
+In the Kokkos programming model, the developer specifies (1) the parallel
+pattern, (2) computational body, and (3) execution policy of a loop. Available
+parallel patterns include parallel-for, parallel-reduce and parallel-scan. The
+computational body of a loop is given as a C++ 11 lambda function.
 
-Hierarchical parallelism: Allows one to exploit the hierarchy in a
-    platform. Additionally, provides an interface to use high-speed
-    team/thread scratch memory.
+The execution policy defines how a loop is executed. \texttt{RangePolicy}
+defines a 1D range of indices. \texttt{TeamPolicy} and \texttt{TeamThreadRange}
+is used to coordinate teams of threads to exploit the hierarchical parallelism
+of the hardware. On a GPU, teams and threads map to thread blocks and threads
+within thread blocks, respectively. On a CPU, teams map to physical cores and
+threads map to hardware threads within cores. \texttt{TeamPolicy} gives access
+to team-private and thread-private scratch memory, an abstraction of shared
+memory in GPUs. Each execution policy is bound to an execution space, an
+abstraction of where the code runs. The latest release of Kokkos supports
+Serial, OpenMP, OpenMP Target, CUDA, ROCm, Pthread, HIP and HPX\@. A SYCL
+backend is also in development.
 
-Listing~\ref{lst:basic} shows a AXPY kernel implemented in Kokkos.
-In this example, the pattern is parallel-for.
+\textit{View} is the fundamental data type in Kokkos and represents a
+multidimensional array. Views are allocated explicitly by the user and
+deallocated automatically by Kokkos using reference counting.
+Each view is associated to a memory space, an abstraction of
+where the data resides.
+
+Listing~\ref{lst:basic} shows a vector addition  kernel implemented in Kokkos.
+In this example, a parallel-for loop is launched that iterates over the 1D
+range $1..N$.
 
 \begin{lstlisting}[caption={Basic data parallel loop},label={lst:basic}]
 Kokkos::parallel_for(RangePolicy<ExecSpace>(N),
@@ -239,11 +250,13 @@ KOKKOS_LAMBDA(int i) {
 });
 \end{lstlisting}
 
-Listing~\ref{lst:hierarchical} shows a GEMV kernel using hierarchical
-parallelism.
+Listing~\ref{lst:hierarchical} shows a matrix vector multiplication kernel
+using hierarchical parallelism. The outer parallel-for loop launches $M$ teams
+that each computes one row of the output vector $y$. The inner parallel-reduce
+computes the dot product of one row in $A$ and $x$.
 
 \begin{lstlisting}[caption={Hierarchical data parallel loop},label={lst:hierarchical}]
-parallel_for(TeamPolicy<ExecSpace>(M),
+parallel_for(TeamPolicy<ExecSpace>(M, AUTO),
 KOKKOS_LAMBDA(const member_type &member) {
     int i = member.team_rank();
     float sum = 0.0f;
@@ -260,38 +273,20 @@ KOKKOS_LAMBDA(const member_type &member) {
 });
 \end{lstlisting}
 
-\textit{View} is the fundamental data type in Kokkos and represents a
-multidimensional array. Views are allocated explicitly by the user and
-deallocated automatically by Kokkos using reference counting. A notable
-feature of Kokkos view is that the layout of the multidimensional array is
-parameterized. This frees programmers from tedious and error-prone index
-calculation. Each view is associated to a memory space, an abstraction of
-where the data resides. This includes Host, CUDA, CudaUVM, etc.
-
-Execution space is an abstraction of where the code runs. The latest stable
-release of Kokkos at the time of writing this paper supports Serial, OpenMP,
-OpenMP Target, CUDA, ROCm, Pthread, HIP and HPX\@. A SYCL backend is in
-development.
-
-Both execution space and memory space are given as template parameters and
-fixed at compile time, thereby making sure that accessing incompatible memory
-at runtime does not happen.
-
 Prior to implementing kEDM, we have examined a number of popular performance
 portability frameworks. These include OpenMP, OpenACC, OpenCL and SYCL\@. We
 chose Kokkos  because recent studies~\cite{Martineau2017, Deakin2019, Deakin2020}
 have shown that it delivers portable performance on a large set of devices
-compared to its alternatives. It has been already adopted by multiple
-production applications~\cite{Sprague2020,Holmen2017,Demeshko2019}
-
-SYCL and OpenMP are attractive choices as they
-have grown rapidly over the last few years in terms of hardware coverage and
-delivered performance. However, we still consider them immature compared to
-Kokkos at the point of writing this paper.
+compared to its alternatives. In addition, it has already been adopted by
+multiple production applications~\cite{Sprague2020,Holmen2017,Demeshko2019}.
+SYCL and OpenMP are attractive choices as they have grown rapidly over the
+last few years in terms of hardware coverage and delivered performance, but we
+still consider them immature compared to Kokkos at the point of writing this
+paper.
 
 \subsection{All k-Nearest Neighbor Search}
 
-We implement the All kNN search using an exhaustive approach. That is, we
+We implement the All k-NN search using an exhaustive approach. That is, we
 first calculate the pairwise distances between all embedded library points in
 the state space and obtain an all-to-all distance matrix. Subsequently, each
 row of the obtained distance matrix is partially sorted to find the distances
@@ -307,11 +302,20 @@ embedding into state space and then calculating the pairwise distances is
 inefficient since it increases memory access. Instead, we perform the time
 delayed embedding and distance calculation at the same time.
 
-Algorithm~\ref{alg:distances} shows the pairwise distance calculation algorithm
-in kEDM\@. A The outer most $i$-loop is parallelized using team parallel loop and
-the $j$-loop is parallelized using intra-thread parallel loop. In addition, we
-use the team-local scratch memory to cache $\mathrm{library}(k $\texttau$ + i)$
-$(k=1 \dots E)$ as it its referenced $L$ times in each $i$-loop iteration.
+Algorithm~\ref{alg:distances} shows the pairwise distance calculation
+algorithm in kEDM\@. The outer-most $i$-loop is mapped to teams while the
+$j$-loop is mapped to threads within a team. A consideration on CPU is which
+loop to vectorize. Since the inner-most $k$-loop is short ($E \leq 20$) in our
+use case, vectorizing it is not profitable. We therefore use \textit{SIMD
+types}\footnote{\url{https://github.com/Kokkos/simd-math}} to vectorize the
+$j$-loop. SIMD types are short vector with overloaded operators that map to
+intrinsic functions. SIMD types are mapped to scalars on GPUs and do not cause
+any overhead.
+
+Note that the library time series is reused if $E > 1$ and we can expect
+more reuse with larger $E$. In addition, we explicitly cache $\mathrm{library}
+(k $\texttau$ + i)$ $(k=1 \dots E)$ on team-local scratch memory.
+% memory alignment
 
 \begin{algorithm}
     \SetAlgoLined
@@ -372,6 +376,29 @@ The top-$k$ kernel is particularly challenging to implement in Kokkos, because
     feature is used to implement parallel calculation of correlation
     coefficient. Algorithm is based on~\cite{Schubert2018}
 \end{itemize}
+
+The $k$-loop is unrolled.
+
+We therefore group the target time series.
+
+\begin{algorithm}
+    \SetAlgoLined
+    \DontPrintSemicolon
+    \KwIn{target time series, distances table, indices table, embedding
+    dimension $E$} \KwOut{Pairwise distances}
+    \PFor{$i \leftarrow 1$ \KwTo $N$}{
+        \PFor{$j \leftarrow 1$ \KwTo $L$}{
+            $p \leftarrow 0$\;
+            \For{$k \leftarrow 1$ \KwTo $E+1$}{
+                $p \leftarrow p + \mathrm{distances}(j, k) \cdot \mathrm{target}
+                (\mathrm{indices}(j, k))$
+            }
+            $\mathrm{prediction}(i, j) \leftarrow p$\;
+        }
+    }
+    \caption{Lookup}%
+    \label{alg:lookup}
+\end{algorithm}
 
 \section{Evaluation}
 
