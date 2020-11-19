@@ -14,7 +14,6 @@
 \usepackage{listings}
 \usepackage{newtxtext}
 \usepackage{newtxmath}
-\usepackage{textgreek}
 \usepackage{url}
 \usepackage{xcolor}
 \RequirePackage[l2tabu, orthodox]{nag}
@@ -346,19 +345,19 @@ any overhead.
 
 Note that the library time series is reused if $E > 1$ and we can expect
 more reuse with larger $E$. In addition, we explicitly cache $\mathrm{library}
-(k $\texttau$ + i)$ $(k=1 \dots E)$ on team-local scratch memory.
+(k \tau + i)$ $(k=1 \dots E)$ on team-local scratch memory.
 % memory alignment
 
 \begin{algorithm}
     \SetAlgoLined
     \DontPrintSemicolon
-    \KwIn{library time series, embedding dimension $E$, time lag \texttau}
+    \KwIn{library time series, embedding dimension $E$, time lag $\tau$}
     \KwOut{Pairwise distances}
     \PFor{$i \leftarrow 1$ \KwTo $L$}{
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
             $\mathrm{distances}(i, j) \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E$}{
-                $\mathrm{distances}(i, j) \leftarrow \mathrm{distances}(i, j) + (\mathrm{library}(k $\texttau$ + i) - \mathrm{library}(k $\texttau$ + j))^2$\;
+                $\mathrm{distances}(i, j) \leftarrow \mathrm{distances}(i, j) + (\mathrm{library}(k \tau + i) - \mathrm{library}(k \tau + j))^2$\;
             }
         }
     }
@@ -387,7 +386,7 @@ The top-$k$ kernel is particularly challenging to implement in Kokkos, because
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
             $\mathrm{distances}(i, j) \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E$}{
-                $\mathrm{distances}(i, j) \leftarrow \mathrm{distances}(i, j) + (\mathrm{library}(k $\texttau$ + i) - \mathrm{library}(k $\texttau$ + j))^2$\;
+                $\mathrm{distances}(i, j) \leftarrow \mathrm{distances}(i, j) + (\mathrm{library}(k \tau + i) - \mathrm{library}(k \tau + j))^2$\;
             }
         }
     }
