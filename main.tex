@@ -129,8 +129,6 @@ Empirical Dynamical Modeling (EDM)~\cite{Chang2017} is a...
 
 \cite{Ma2017}
 
-brain science~\cite{Natsukawa2017}
-
 We have been developing mpEDM~\cite{mpedm}, a massively parallel
 implementation of EDM.
 
@@ -146,7 +144,41 @@ platforms.
 
 \section{Background}
 
-\subsection{Empirical Dynamical Modeling (EDM)}
+\subsection{Empirical Dynamical Modeling (EDM)}\label{sec:edm}
+
+EDM is a nonlinear time series causal inference framework based on the
+generalized Takens' embedding theorem on state space
+reconstruction~\cite{Deyle2011}. EDM is used to study and predict the behavior
+of nonlinear dynamical systems. Convergent Cross Mapping (CCM) is one of the EDM
+algorithms that allows to estimate the existence and strength of the causal
+strength between two time series in a dynamical system~\cite{Sugihara2012}.
+
+In this study, we utilize CCM to infer the causal relationships between every
+neuron in an entire brain and construct a causal map that describes the dynamic
+interactions among neurons. For this purpose, we have recorded the neural
+activity (\emph{i.e.} firing rate) of an entire larval zebrafish brain at
+singe-neuron resolution by using light sheet fluorescence microscopy. The
+original implementation of EDM, cppEDM, has mostly been used for individual time
+series of relatively short length and and mostly small numbers of variables for
+its computational cost. Since a larval zebrafish brain contains approximately
+$10^5$ neurons, a staggering number of $10^{10}$ cross mappings need to be
+performed in total. CCM of this enormous scale has never been achieved so far
+because of the sheer amount of computation required.
+
+EDM has been successfully applied to diverse research fields. In neuroscience,
+CCM was applied to identify the effective connectivity between brain areas from
+magnetoencephalography (MEG) data~\cite{Natsukawa2017}. In ecology, Grziwotz
+\emph{et al.} found the causal relationships between the environment and
+mosquito abundance by using CCM~\cite{grziwotz2018empirical}. Environmental
+factors, such as temperature, precipitation, dew point, air pressure, and mean
+tide level were identified to causally affect mosquito abundance. Ma \emph{et
+al.} applied simplex projection to forecast wind generation~\cite{ma2017ultra}.
+In~\cite{anderson2008fishing}, an EDM algorithm called
+S-Map~\cite{sugihara1994nonlinear} was used to find the relationship between
+harvested and unharvested fish in terms of size, age, and others. Luo \emph{et
+al.} applied CCM to estimate the causal relationships of user behavior in an
+online social network~\cite{luo2014causal}. These use cases demonstrate the wide
+applicability of EDM to analyze nonlinear dynamical systems.
 
 \subsection{Challenges in mpEDM}\label{sec:challenges}
 
@@ -338,7 +370,6 @@ more reuse with larger $E$. In addition, we explicitly cache $\mathrm{library}
 
 The top-$k$ kernel is particularly challenging to implement in Kokkos, because
 
-
 \begin{itemize}
 \item Sort each row of the pairwise distance matrix in parallel. (Each team sorts one row. Threads within a team each finds the top-k elements from a chunk of a row).
 \item Use modified insertion sort algorithm shown in previous work to find the top-k elements.
@@ -352,6 +383,7 @@ The top-$k$ kernel is particularly challenging to implement in Kokkos, because
     \KwIn{distance matrix, top-$k$}
     \KwOut{Partial sort}
     \PFor{$i \leftarrow 1$ \KwTo $L$}{
+        $q \leftarrow PriorityQueue()$\;
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
             $\mathrm{distances}(i, j) \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E$}{
@@ -363,23 +395,28 @@ The top-$k$ kernel is particularly challenging to implement in Kokkos, because
     \label{alg:sort}
 \end{algorithm}
 
-
 \subsection{Lookup}
 
-\begin{itemize}
-\item Perform many lookups in parallel. (Each team performs lookups from one
-    source time series)
-\item Cache target time series in team scratch memory for faster random
-    access.
-\item Do not write out the predicted time series to global memory and
-    calculate Pearson’s correlation on-the-fly. Kokkos’ custom reduction
-    feature is used to implement parallel calculation of correlation
-    coefficient. Algorithm is based on~\cite{Schubert2018}
-\end{itemize}
+Given a library and a target time series, suppose the optimal embedding
+dimension of the target time series is $E$. We use the $E$-dimensional embedding
+of the library to predict the target. To maximize reuse of the lookup table, we
+can group the target time series by its optimal embedding dimension.
 
-The $k$-loop is unrolled.
+Algorithm~\ref{alg:lookup} shows the lookup routine. The outer most $i$-loop
+iterates over all time series of which optimal embedding dimension is $E$ and
+parallelized using \texttt{TeamPolicy}. Each team performs prediction of one
+target time series. The $j$-loop is parallelized using \texttt{TeamThreadRange}
+and makes predictions of each time point within a time series (line 5). The
+inner most serial $k$-loop is unrolled to exploit ILP\@. Since Kokkos currently
+does not have a portable way to request loop unrolling, we use the
+\texttt{\#pragma unroll} directive here. The loop body requires indirect access
+to the target time series using the indices table. To speed up random access, we
+cache the target time series in team-private scratch memory.
 
-We therefore group the target time series.
+Do not write out the predicted time series to global memory and calculate
+Pearson’s correlation on-the-fly. Kokkos’ custom reduction feature is used to
+implement parallel calculation of correlation coefficient. Algorithm is
+based on~\cite{Schubert2018}.
 
 \begin{algorithm}
     \SetAlgoLined
@@ -407,13 +444,12 @@ We therefore group the target time series.
 % use table?
 
 We evaluated kEDM on two compute servers installed at the Salk Institute: (1)
-Ika and (2) Aori.
-Ika is equipped with two sockets of 20-core Intel Xeon Gold 6148 CPUs, one
-NVIDIA V100 PCIe card and 376 GiB of RAM. Aori is equipped with two sockets of
-64-core AMD EPYC 7742 CPUs and 1 TiB of RAM.
-kEDM was built with Kokkos 3.2 on both machines. On Aori, we used AMD
-Optimizing C/C++ Compiler (AOCC) 2.2.0, a fork of Clang by AMD. On Ika, we
-used NVIDIA CUDA Compiler (NVCC) 10.1.
+Ika and (2) Aori. Ika is equipped with two sockets of 20-core Intel Xeon Gold
+6148 CPUs, one NVIDIA V100 PCIe card and 376 GiB of RAM\@. Aori is equipped with
+two sockets of 64-core AMD EPYC 7742 CPUs and 1 TiB of RAM\@. kEDM was built
+with Kokkos 3.2 on both machines. On Aori, we used AMD Optimizing C/C++ Compiler
+(AOCC) 2.2.0, a fork of Clang by AMD. On Ika, we used NVIDIA CUDA Compiler (NVCC)
+10.1.
 
 \subsection{Comparison with mpEDM}
 
@@ -434,14 +470,14 @@ used NVIDIA CUDA Compiler (NVCC) 10.1.
 \begin{figure}
     \centering
     \includegraphics{figs/runtime_lookup_epyc}
-    \caption{Runtime of lookups on EPYC 7742 ($L$=10,000, $N$=10,000)}%
+    \caption{Runtime of lookups on EPYC 7742 ($L$=10,000, $N$=100,000)}%
     \label{fig:breakdown-lookup-epyc}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics{figs/runtime_lookup_v100}
-    \caption{Runtime of lookups on V100 ($L$=10,000, $N$=10,000)}%
+    \caption{Runtime of lookups on V100 ($L$=10,000, $N$=100,000)}%
     \label{fig:breakdown-lookup-v100}
 \end{figure}
 
@@ -475,19 +511,22 @@ collect the required metrics on GPU and CPU, respectively.
 
 \begin{figure}
     \centering
-    \includegraphics{figs/roofline_lookup_v100}
-    \caption{Roofline analysis of lookup kernel on V100 ($L$=10,000, $N$=10,000)}%
+    \includegraphics{figs/roofline_lookup_wo_rho_v100}
+    \caption{Roofline analysis of lookup kernel on V100 ($L$=10,000, $N$=100,000)}%
     \label{fig:roofline-lookup-v100}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics{figs/roofline_lookup_epyc}
-    \caption{Roofline analysis of lookup kernel on EPYC 7742 ($L$=10,000, $N$=10,000)}%
+    \includegraphics{figs/roofline_lookup_wo_rho_epyc}
+    \caption{Roofline analysis of lookup kernel on EPYC 7742 ($L$=10,000, $N$=100,000)}%
     \label{fig:roofline-lookup-eypc}
 \end{figure}
 
 \section{Conclusion \& Future Work}
+
+Python interface
+AMD GPUs and A64FX
 
 \section*{Acknowledgements}
 This work was supported by JSPS KAKENHI Grant Number JP20K19808 (KT) and an
