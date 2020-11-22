@@ -171,8 +171,8 @@ identify and take advantage of optimization opportunities in mpEDM and achieve
 
 \begin{figure*}
     \centering
-    \includegraphics{figs/xmap_overview}
-    \caption{Overview of EDM cross mapping}%
+    \includegraphics[width=1.0\linewidth]{figs/xmap_overview}
+    \caption{Overview of Convergent Cross Mapping}%
     \label{fig:edm}
 \end{figure*}
 
@@ -188,38 +188,49 @@ Section~\ref{sec:conclusion} concludes this paper and discusses future work.
 
 \subsection{Empirical Dynamical Modeling (EDM)}\label{sec:edm}
 
-Empirical Dynamical Modeling (EDM) is a non-linear and non-parametric time
-series analysis framework based on the Takens' embedding
-theorem~\cite{Deyle2011}. Takens' theorem states that, given a time-series
-observation of a deterministic dynamical system, one can reconstruct the
-underlying attractor manifold of the dynamical system using time-delayed
-embeddings of the observation. The reconstructed manifold might not preserve
-the global structure of the original manifold but preserves the local
-topological features of the original manifold (\textit{i.e.} a diffeomorphism).
+Empirical Dynamical Modeling (EDM) is a non-linear time series analysis
+framework based on the Takens' embedding theorem~\cite{Deyle2011}. Takens'
+theorem states that given a time-series observation of a deterministic
+dynamical system, one can reconstruct the underlying attractor manifold of the
+dynamical system using time-delayed embeddings of the observation. While the
+reconstructed manifold might not preserve the global structure of the original
+manifold, it preserves the local topological features (\textit{i.e.} a
+diffeomorphism).
 
-Convergent Cross Mapping (CCM) is one of the EDM methods that identifies and
-quantifies the causal relationship between two time time series
-variables~\cite{Sugihara2012}. CCM can identify causality even in the absence
-of correlation.
+Convergent Cross Mapping (CCM)~\cite{Sugihara2012} is one of the EDM methods
+that identifies and quantifies the causal relationship between two time series
+variables. CCM can identify causality even in the complete absence of
+correlation. Figure~\ref{fig:edm} shows the overview of CCM\@. Following is a
+brief overview of how CCM works. Suppose two time series $X(t)$ and $Y(t)$ are
+given.
 
-EDM has been successfully applied to diverse research fields. In neuroscience,
-CCM was applied to identify the effective connectivity between brain areas from
-magnetoencephalography (MEG) data~\cite{Natsukawa2017}. In ecology, Grziwotz
-\emph{et al.} found the causal relationships between the environment and
-mosquito abundance by using CCM~\cite{grziwotz2018empirical}. Environmental
-factors, such as temperature, precipitation, dew point, air pressure, and mean
-tide level were identified to causally affect mosquito abundance. Ma \emph{et
-al.} applied simplex projection to forecast wind generation~\cite{ma2017ultra}.
-In~\cite{anderson2008fishing}, an EDM algorithm called
-S-Map~\cite{sugihara1994nonlinear} was used to find the relationship between
-harvested and unharvested fish in terms of size, age, and others. Luo \emph{et
-al.} applied CCM to estimate the causal relationships of user behavior in an
-online social network~\cite{luo2014causal}. These use cases demonstrate the wide
-applicability of EDM to analyze nonlinear dynamical systems.
-~\cite{Natsukawa2017,Ma2017,VanBerkel2020}
-~\cite{Pu2019,Ma2017}.
+\begin{enumerate}
+    \item Time series $X$ and $Y$ are embedded into $E$-dimensional space
+        using their time lags: Embedding of $X$ is $x$ where $x(t)=\left(X(t),
+        X(t-\tau), \dots, X(t-(E-1) \tau)\right)$. $\tau$ is the time lag.
+    \item For each point $x(t)$ in $x$, $E+1$ nearest neighbors of $x(t)$ in
+        the state space are found. Suppose the nearest neighbors are $x(t_1),
+        x(t_2), \dots, x(t_{E+1})$ and the Euclidean distance between $x(t_i)$
+        and $x(t)$ is $d(t_i)$.
+    \item Prediction $\hat{y}(t)$ for $y(t)$ is a linear combination of
+        corresponding points $y(t_1), y(t_2), \dots, y(t_{E+1})$.
+        Specifically,
+        \begin{equation}
+            \hat{y}(t) = \sum^{E+1}_{i=1} \frac{\exp{d(t_i)}}{\sum
+            \exp{d(t_i)}} \cdot y(t_i)
+        \end{equation}
+        The first component of $\hat{y}(t)$ is $\hat{Y}(t)$.
+    \item Pearson's correlation $\rho$ between $Y$ and $\hat{Y}$ is used to
+        assess the predictive skill. If $\rho$ is high, we conclude $Y$
+        ``CCM-causes'' $X$.
+\end{enumerate}
+
+In practice, the $k$-
+
+~\cite{Natsukawa2017,VanBerkel2020}
 
 % cite papers on EDM acceleration
+~\cite{Pu2019,Ma2017}.
 
 \subsection{Challenges in mpEDM}\label{sec:challenges}
 
@@ -279,7 +290,9 @@ ArrayFire implicitly allocates, deallocates and copies arrays.
 \subsection{Overall Design}
 
 kEDM\footnote{\url{https://github.com/keichi/kEDM}} is a performance-portable
-implementation of EDM based on Kokkos.
+implementation of EDM based on Kokkos. To ensure the correctness of the
+implementation, the output is validated against the output from mpEDM as well
+as the reference implementation pyEDM using automated unit tests.
 
 \subsection{Kokkos}
 
@@ -394,13 +407,15 @@ more reuse with larger $E$. In addition, we explicitly cache $\mathrm{library}
 \begin{algorithm}
     \SetAlgoLined
     \DontPrintSemicolon
-    \KwIn{library time series, embedding dimension $E$, time lag $\tau$}
-    \KwOut{Pairwise distances}
+    \KwIn{time series $x$, embedding dimension $E$, time lag $\tau$}
+    \KwOut{Pairwise distance matrix $d$}
+    \tcp{\texttt{TeamPolicy}}
     \PFor{$i \leftarrow 1$ \KwTo $L$}{
+        \tcp{\texttt{ThreadRange}}
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
-            $\mathrm{distances}(i, j) \leftarrow 0$\;
+            $d(i, j) \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E$}{
-                $\mathrm{distances}(i, j) \leftarrow \mathrm{distances}(i, j) + (\mathrm{library}(k \tau + i) - \mathrm{library}(k \tau + j))^2$\;
+                $d(i, j) \leftarrow d(i, j) + (x(k \tau + i) - x(k \tau + j))^2$\;
             }
         }
     }
@@ -427,9 +442,9 @@ The top-$k$ kernel is particularly challenging to implement in Kokkos, because
     \PFor{$i \leftarrow 1$ \KwTo $L$}{
         $q \leftarrow PriorityQueue()$\;
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
-            $\mathrm{distances}(i, j) \leftarrow 0$\;
+            $d(i, j) \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E$}{
-                $\mathrm{distances}(i, j) \leftarrow \mathrm{distances}(i, j) + (\mathrm{library}(k \tau + i) - \mathrm{library}(k \tau + j))^2$\;
+                $d(i, j) \leftarrow d(i, j) + (x(k \tau + i) - x(k \tau + j))^2$\;
             }
         }
     }
@@ -469,10 +484,9 @@ based on~\cite{Schubert2018}.
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
             $p \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E+1$}{
-                $p \leftarrow p + \mathrm{distances}(j, k) \cdot \mathrm{target}
-                (\mathrm{indices}(j, k))$
+                $p \leftarrow p + d(j, k) \cdot y(t(j, k))$
             }
-            $\mathrm{prediction}(i, j) \leftarrow p$\;
+            $\hat{y}(i, j) \leftarrow p$\;
         }
     }
     \caption{Lookup}%
