@@ -209,19 +209,19 @@ given.
         using their time lags: Embedding of $X$ is $x$ where $x(t)=\left(X(t),
         X(t-\tau), \dots, X(t-(E-1) \tau)\right)$. $\tau$ is the time lag.
     \item For each point $x(t)$ in $x$, $E+1$ nearest neighbors of $x(t)$ in
-        the state space are found. Suppose the nearest neighbors are $x(t_1),
-        x(t_2), \dots, x(t_{E+1})$ and the Euclidean distance between $x(t_i)$
-        and $x(t)$ is $d(t_i)$.
+        the state space are found. We refer to the nearest neighbors as
+        $x(t_1), x(t_2), \dots, x(t_{E+1})$ and the Euclidean distance between
+        $x(t)$ and $x(t_i)$ as $d(t, t_i)=\lVert x(t) - x(t_i) \rVert$.
     \item Prediction $\hat{y}(t)$ for $y(t)$ is a linear combination of
-        corresponding points $y(t_1), y(t_2), \dots, y(t_{E+1})$.
+        the corresponding points $y(t_1), y(t_2), \dots, y(t_{E+1})$.
         Specifically,
         \begin{equation}
-            \hat{y}(t) = \sum^{E+1}_{i=1} \frac{\exp{d(t_i)}}{\sum
+            \hat{y}(t) = \sum^{E+1}_{i=1} \frac{\exp{d(t_i)}}{\sum^{E+1}_{i=1}
             \exp{d(t_i)}} \cdot y(t_i)
         \end{equation}
         The first component of $\hat{y}(t)$ is $\hat{Y}(t)$.
-    \item Pearson's correlation $\rho$ between $Y$ and $\hat{Y}$ is used to
-        assess the predictive skill. If $\rho$ is high, we conclude $Y$
+    \item Pearson's correlation $\rho$ between $Y$ and $\hat{Y}$ is computed
+        to assess the predictive skill. If $\rho$ is high, we conclude $Y$
         ``CCM-causes'' $X$.
 \end{enumerate}
 
@@ -401,21 +401,21 @@ any overhead.
 
 Note that the library time series is reused if $E > 1$ and we can expect
 more reuse with larger $E$. In addition, we explicitly cache $\mathrm{library}
-(k \tau + i)$ $(k=1 \dots E)$ on team-local scratch memory.
+(k \tau + i)$ (where $k=1 \dots E$) on team-local scratch memory.
 % memory alignment
 
 \begin{algorithm}
     \SetAlgoLined
     \DontPrintSemicolon
-    \KwIn{time series $x$, embedding dimension $E$, time lag $\tau$}
-    \KwOut{Pairwise distance matrix $d$}
+    \KwIn{Library time series $x$, embedding dimension $E$, time lag $\tau$}
+    \KwOut{Pairwise distance matrix $D$}
     \tcp{\texttt{TeamPolicy}}
     \PFor{$i \leftarrow 1$ \KwTo $L$}{
         \tcp{\texttt{ThreadRange}}
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
-            $d(i, j) \leftarrow 0$\;
+            $D(i, j) \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E$}{
-                $d(i, j) \leftarrow d(i, j) + (x(k \tau + i) - x(k \tau + j))^2$\;
+                $D(i, j) \leftarrow D(i, j) + (x(k \tau + i) - x(k \tau + j))^2$\;
             }
         }
     }
@@ -434,23 +434,12 @@ The top-$k$ kernel is particularly challenging to implement in Kokkos, because
 \item \textbf{TODO} automatic tuning of team size
 \end{itemize}
 
-\begin{algorithm}
-    \SetAlgoLined
-    \DontPrintSemicolon
-    \KwIn{Distance matrix, top-$k$}
-    \KwOut{Partially sorted distance matrix}
-    \PFor{$i \leftarrow 1$ \KwTo $L$}{
-        $q \leftarrow PriorityQueue()$\;
-        \PFor{$j \leftarrow 1$ \KwTo $L$}{
-            $d(i, j) \leftarrow 0$\;
-            \For{$k \leftarrow 1$ \KwTo $E$}{
-                $d(i, j) \leftarrow d(i, j) + (x(k \tau + i) - x(k \tau + j))^2$\;
-            }
-        }
-    }
-    \caption{Top-k search}%
-    \label{alg:sort}
-\end{algorithm}
+\begin{figure}
+    \centering
+    \includegraphics[width=.8\columnwidth]{figs/sorting}
+    \caption{Top-$k$ sorting algorithm}%
+    \label{fig:topk}
+\end{figure}
 
 \subsection{Lookup}
 
@@ -478,15 +467,14 @@ based on~\cite{Schubert2018}.
 \begin{algorithm}
     \SetAlgoLined
     \DontPrintSemicolon
-    \KwIn{target time series, distances table, indices table, embedding
-    dimension $E$} \KwOut{Pairwise distances}
+    \KwIn{Target time series $y$, sorted distance matrix $D$, sorted index
+    matrix $T$, embedding dimension $E$}
+    \KwOut{Predicted time series $\hat{y}$}
     \PFor{$i \leftarrow 1$ \KwTo $N$}{
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
-            $p \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E+1$}{
-                $p \leftarrow p + d(j, k) \cdot y(t(j, k))$
+                $\hat{y}(i, j) \leftarrow \hat{y}(i, j) + D(j, k) \cdot y(T(j, k))$ \;
             }
-            $\hat{y}(i, j) \leftarrow p$\;
         }
     }
     \caption{Lookup}%
