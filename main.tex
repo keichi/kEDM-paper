@@ -215,10 +215,13 @@ given.
     \item Prediction $\hat{y}(t)$ for $y(t)$ is a linear combination of
         the corresponding points $y(t_1), y(t_2), \dots, y(t_{E+1})$.
         Specifically,
-        \begin{align*}
-            \hat{y}(t) &= \sum^{E+1}_{i=1} \frac{w_i}{\sum^{E+1}_{i=1}{w_i}} \cdot y(t_i),\\
-            ~\text{where}~w_i&=\exp{-\frac{d(t, t_i)}{\min{d(t, t_i)}}}
-        \end{align*}
+        \begin{equation*}
+            \hat{y}(t) = \sum^{E+1}_{i=1} \frac{w_i}{\sum^{E+1}_{i=1}{w_i}} \cdot y(t_i)
+        \end{equation*}
+        where
+        \begin{equation*}
+            w_i = \exp{-\frac{d(t, t_i)}{\min{d(t, t_i)}}}
+        \end{equation*}
         The first component of $\hat{y}(t)$ is $\hat{Y}(t)$.
     \item Pearson's correlation $\rho$ between $Y$ and $\hat{Y}$ is computed
         to assess the predictive skill. If $\rho$ is high, we conclude $Y$
@@ -227,10 +230,10 @@ given.
 
 This procedure is repeated for all combinations of time series when performing
 all-to-all CCM between multiple time series. We showed in our previous
-work~\cite{mpedm} that when performing CCM between multiple time series, one can
-precompute the neighbors for every point of $x$ and then reuse the neighbors to
-make predictions for all target time series. This reduces the number of $k$-NN
-search and provides significant speedup~\cite{mpedm}.
+work~\cite{mpedm} that one can precompute the neighbors for every point of $x$
+and then reuse the neighbors to make predictions for all target time series.
+This reduces the number of $k$-NN search and provides significant
+speedup~\cite{mpedm}.
 
 ~\cite{Natsukawa2017,VanBerkel2020}
 
