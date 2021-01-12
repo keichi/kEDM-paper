@@ -505,17 +505,17 @@ with Kokkos 3.2 on both machines. On Aori, we used AMD Optimizing C/C++ Compiler
 
 \subsection{Comparison with mpEDM}
 
-\begin{table*}[]
-\begin{tabular}{lrrrrr}
+\begin{table*}
+\centering
+\begin{tabular}{@{}lrrrrrrrr@{}}
 \toprule
-Dataset Name         & \# of Time Series & \# of Time Steps & kEDM Runtime & mpEDM Runtime & Speedup \\
-\midrule
-Fish1\_150a\_Normo   & 154               & 1,600            &              &               &         \\
-Subject6\_TimeSeries & 92,538            & 3,780            &              &               &         \\
-Genes                & 45,318            & 96               &              &               &         \\
-Fly80XY              & 82                & 10,608           &              &               &         \\
-F1                   & 8,520             & 29,484           &              &               &         \\
-\bottomrule
+        &                   &                  & \multicolumn{3}{c}{V100} & \multicolumn{3}{c}{EPYC 7742} \\ \cmidrule(l){4-6} \cmidrule(l){7-9}
+Dataset & \# of Time Series & \# of Time Steps & kEDM  & mpEDM & Speedup & kEDM  & mpEDM & Speedup \\ \midrule
+Fish1\_150a\_Normo   & 154               & 1,600            &       &       &         &       &       &         \\
+Subject6\_TimeSeries & 92,538            & 3,780            &       &       &         &       &       &         \\
+Genes                & 45,318            & 96               &       &       &         &       &       &         \\
+Fly80XY              & 82                & 10,608           &       &       &         &       &       &         \\
+F1                   & 8,520             & 29,484           &       &       &         &       &       &         \\ \bottomrule
 \end{tabular}
 \caption{Benchmark results using real-world datasets}%
 \label{tbl:realw-world}
