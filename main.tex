@@ -515,12 +515,12 @@ with Kokkos 3.2 on both machines. On Aori, we used AMD Optimizing C/C++ Compiler
 \toprule
 
                      & \multicolumn{1}{c}{} & \multicolumn{1}{c}{} & \multicolumn{3}{c}{V100} & \multicolumn{3}{c}{EPYC 7742} \\ \cmidrule(l){4-6}  \cmidrule(l){7-9}
-Dataset Name         & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}\# of\\ Time Series\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}\# of\\ Time Steps\end{tabular}} & kEDM & mpEDM & Speedup & kEDM & mpEDM & Speedup \\ \midrule
-Fish1\_150a\_Normo & 154    & 1,600  &      3s &       &         &       s &       &         \\
-Fly80XY            & 82     & 10,608 &     11s &       &         &       s &       &         \\
-Genes              & 45,318 & 96     &    344s &       &         &       s &       &         \\
-Subject6           & 92,538 & 3,780  &  5,391s &       &         &       s &       &         \\
-F1                 & 8,520  & 29,484 & 11,372s &       &         &       s &       &         \\ \bottomrule
+Dataset              & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}\# of\\ Time Series\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}\# of\\ Time Steps\end{tabular}} & kEDM & mpEDM & Speedup & kEDM & mpEDM & Speedup \\ \midrule
+Fish1\_Normo & 154    & 1,600  &      3s &     11s & 3.67$\times$ &      3s &     s &         \\
+Fly80XY      & 82     & 10,608 &     11s &     50s & 4.55$\times$ &     22s &     s &         \\
+Genes        & 45,318 & 96     &    344s &    334s & 0.97$\times$ &    115s &     s &         \\
+Subject6     & 92,538 & 3,780  &  5,391s & 29,579s &              & 13,627s &     s &         \\
+F1           & 8,520  & 29,484 & 11,372s &         &              & 23,482s  &     s &         \\ \bottomrule
 \end{tabular}
 \end{table*}
 
