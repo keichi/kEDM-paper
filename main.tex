@@ -1,5 +1,7 @@
 \documentclass[conference]{IEEEtran}
 
+\RequirePackage[l2tabu, orthodox]{nag}
+
 \usepackage{amsmath}
 \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
 \usepackage{booktabs}
@@ -8,15 +10,14 @@
 % \usepackage{flushend}
 \usepackage[bottom,hang]{footmisc}
 \usepackage[T1]{fontenc}
-\usepackage[utf8]{inputenc}
 \usepackage{graphicx}
+\usepackage[utf8]{inputenc}
 \usepackage{icomma}
 \usepackage{listings}
 \usepackage{newtxtext}
 \usepackage{newtxmath}
 \usepackage{url}
 \usepackage{xcolor}
-\RequirePackage[l2tabu, orthodox]{nag}
 
 % Allow PDF 1.7 documents to be included with \includegraphics
 \pdfminorversion=7
@@ -126,13 +127,13 @@ congestion and potentially improve the performance of applications.
 \section{Introduction}
 
 Empirical Dynamical Modeling (EDM)~\cite{Chang2017} is a state-of-the-art
-non-linear time series analysis framework for various tasks such as assessing
-the non-linearity of a system, making short-term forecasts, and identifying
-the existence and strength of causal relationships between variables. Despite
-its wide applicability, EDM is computationally expensive and thus the scale of
-the datasets that can be applied to was limited. To overcome this obstacle,
-researchers have attempted to accelerate EDM  from both algorithmic and
-implementational aspects~\cite{Pu2019,Ma2017}.
+non-linear time series analysis framework used for various tasks such as
+assessing the non-linearity of a system, making short-term forecasts, and
+identifying the existence and strength of causal relationships between
+variables. Despite its wide applicability, EDM is computationally expensive
+and thus the scale of the datasets that can be applied to was limited. To
+overcome this obstacle, researchers have attempted to accelerate EDM  from
+both algorithmic and implementational aspects~\cite{Pu2019,Ma2014}.
 
 Our approach for accelerating EDM is to take advantage of modern HPC systems
 equipped with multi-core CPUs and GPUs. We have been developing mpEDM, a
@@ -153,21 +154,20 @@ EPYC CPUs and Radeon GPUs while the Aurora system at the Argonne National
 Laboratory will employ Intel Xeon CPUs and Xe GPUs. The Fugaku system at RIKEN
 uses Fujitsu A64FX Arm CPUs.
 
-Currently, mpEDM has two backends for x86-64 CPUs and NVIDIA GPUs
+Currently, mpEDM has two backends for x86\_64 CPUs and NVIDIA GPUs
 independently developed and maintained. This design becomes a burden when
-targeting a new hardware architecture, because a new backend needs be added,
-which requires development effort and raises maintenance cost. On the other
-hand, various performance portability frameworks~\cite{Deakin2019, Deakin2020}
-have been proposed to develop performance-portable applications from
-singe-source code base.
+targeting a new hardware architecture requires development effort and
+increases maintenance cost because a new backend needs be implemented.
+Meanwhile, various performance portability frameworks~\cite{Deakin2019,
+Deakin2020} have been proposed to develop performance-portable applications
+from singe-source code base.
 
 In this paper, we use the Kokkos~\cite{Edwards2014} framework and develop
-\textit{kEDM}, a novel performance-portable implementation of EDM\@.
-The new implementation is single-source design which facilitates the future
-development and porting to new hardware. This also makes it possible to run
-individual kernels on CPUs or accelerators on hybrid systems. Furthermore, we
-identify and take advantage of optimization opportunities in mpEDM and achieve
-3--4$\times$ higher performance on NVIDIA V100 GPUs.
+\textit{kEDM}, a performance-portable implementation of EDM\@ that runs on
+both CPUs and GPUs. The new implementation is single-source design which
+facilitates the future development and porting to new hardware. Furthermore,
+we identify and take advantage of optimization opportunities in mpEDM and
+achieve 3--4$\times$ higher performance on NVIDIA V100 GPUs.
 
 \begin{figure*}
     \centering
@@ -205,16 +205,18 @@ brief overview of how CCM works. Suppose two time series $X(t)$ and $Y(t)$ are
 given.
 
 \begin{enumerate}
-    \item Time series $X$ and $Y$ are embedded into $E$-dimensional space
-        using their time lags: Embedding of $X$ is $x$ where $x(t)=\left(X(t),
-        X(t-\tau), \dots, X(t-(E-1) \tau)\right)$. $\tau$ is the time lag.
-    \item For each point $x(t)$ in $x$, $E+1$ nearest neighbors of $x(t)$ in
-        the state space are found. We refer to the nearest neighbors as
-        $x(t_1), x(t_2), \dots, x(t_{E+1})$ and the Euclidean distance between
-        $x(t)$ and $x(t_i)$ as $d(t, t_i)=\lVert x(t) - x(t_i) \rVert$.
-    \item Prediction $\hat{y}(t)$ for $y(t)$ is a linear combination of
-        the corresponding points $y(t_1), y(t_2), \dots, y(t_{E+1})$.
-        Specifically,
+    \item \textit{Embedding}: Time series $X$ and $Y$ are embedded into
+        $E$-dimensional space using their time lags: Embedding of $X$ is $x$
+        where $x(t)=\left(X(t), X(t-\tau), \dots, X(t-(E-1) \tau)\right)$.
+        $\tau$ is the time lag.
+    \item \textit{k-NN search}: For each point $x(t)$ in $x$, $E+1$ nearest
+        neighbors of $x(t)$ in the state space are found. We refer to the
+        nearest neighbors as $x(t_1), x(t_2), \dots, x(t_{E+1})$ and the
+        Euclidean distance between $x(t)$ and $x(t_i)$ as $d(t, t_i)=\lVert
+        x(t) - x(t_i) \rVert$.
+    \item \textit{Prediction}: Prediction $\hat{y}(t)$ for $y(t)$ is a linear
+        combination of the corresponding points $y(t_1), y(t_2), \dots,
+        y(t_{E+1})$. Specifically,
         \begin{equation*}
             \hat{y}(t) = \sum^{E+1}_{i=1} \frac{w_i}{\sum^{E+1}_{i=1}{w_i}} \cdot y(t_i)
         \end{equation*}
@@ -228,7 +230,7 @@ given.
         ``CCM-causes'' $X$.
 \end{enumerate}
 
-This procedure is repeated for all combinations of time series when performing
+These steps are repeated for all combinations of time series when performing
 all-to-all CCM between multiple time series. We showed in our previous
 work~\cite{mpedm} that one can precompute the neighbors for every point of $x$
 and then reuse the neighbors to make predictions for all target time series.
@@ -507,18 +509,19 @@ with Kokkos 3.2 on both machines. On Aori, we used AMD Optimizing C/C++ Compiler
 
 \begin{table*}
 \centering
+\caption{Benchmark results using real-world datasets}%
+\label{tbl:real-world}
 \begin{tabular}{@{}lrrrrrrrr@{}}
 \toprule
-        &                   &                  & \multicolumn{3}{c}{V100} & \multicolumn{3}{c}{EPYC 7742} \\ \cmidrule(l){4-6} \cmidrule(l){7-9}
-Dataset & \# of Time Series & \# of Time Steps & kEDM  & mpEDM & Speedup & kEDM  & mpEDM & Speedup \\ \midrule
-Fish1\_150a\_Normo   & 154               & 1,600            &       &       &         &       &       &         \\
-Subject6\_TimeSeries & 92,538            & 3,780            &       &       &         &       &       &         \\
-Genes                & 45,318            & 96               &       &       &         &       &       &         \\
-Fly80XY              & 82                & 10,608           &       &       &         &       &       &         \\
-F1                   & 8,520             & 29,484           &       &       &         &       &       &         \\ \bottomrule
+
+                     & \multicolumn{1}{c}{} & \multicolumn{1}{c}{} & \multicolumn{3}{c}{V100} & \multicolumn{3}{c}{EPYC 7742} \\ \cmidrule(l){4-6}  \cmidrule(l){7-9}
+Dataset Name         & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}\# of\\ Time Series\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}\# of\\ Time Steps\end{tabular}} & kEDM & mpEDM & Speedup & kEDM & mpEDM & Speedup \\ \midrule
+Fish1\_150a\_Normo & 154    & 1,600  &      3s &       &         &       s &       &         \\
+Fly80XY            & 82     & 10,608 &     11s &       &         &       s &       &         \\
+Genes              & 45,318 & 96     &    344s &       &         &       s &       &         \\
+Subject6           & 92,538 & 3,780  &  5,391s &       &         &       s &       &         \\
+F1                 & 8,520  & 29,484 & 11,372s &       &         &       s &       &         \\ \bottomrule
 \end{tabular}
-\caption{Benchmark results using real-world datasets}%
-\label{tbl:realw-world}
 \end{table*}
 
 \begin{figure}
