@@ -4,6 +4,7 @@
 
 \usepackage{amsmath}
 \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\usepackage[english]{babel}
 \usepackage{booktabs}
 \usepackage[hang]{caption}
 \usepackage{cite}
@@ -197,50 +198,46 @@ reconstructed manifold might not preserve the global structure of the original
 manifold, it preserves the local topological features (\textit{i.e.} a
 diffeomorphism).
 
-Convergent Cross Mapping (CCM)~\cite{Sugihara2012} is one of the EDM methods
-that identifies and quantifies the causal relationship between two time series
-variables. CCM can identify causality even in the complete absence of
-correlation. Figure~\ref{fig:edm} shows the overview of CCM\@. Following is a
-brief overview of how CCM works. Suppose two time series $X(t)$ and $Y(t)$ are
-given.
+Convergent Cross Mapping (CCM)~\cite{Sugihara2012,Natsukawa2017,VanBerkel2020}
+is one of the EDM methods that identifies and quantifies the causal
+relationship between two time series variables. Figure~\ref{fig:edm} shows the
+overview of CCM\@. Give two time series $X(t)$ and $Y(t)$, following four
+steps are performed:
 
 \begin{enumerate}
     \item \textit{Embedding}: Time series $X$ and $Y$ are embedded into
-        $E$-dimensional space using their time lags: Embedding of $X$ is $x$
-        where $x(t)=\left(X(t), X(t-\tau), \dots, X(t-(E-1) \tau)\right)$.
-        $\tau$ is the time lag.
-    \item \textit{k-NN search}: For each point $x(t)$ in $x$, $E+1$ nearest
-        neighbors of $x(t)$ in the state space are found. We refer to the
-        nearest neighbors as $x(t_1), x(t_2), \dots, x(t_{E+1})$ and the
-        Euclidean distance between $x(t)$ and $x(t_i)$ as $d(t, t_i)=\lVert
-        x(t) - x(t_i) \rVert$.
-    \item \textit{Prediction}: Prediction $\hat{y}(t)$ for $y(t)$ is a linear
-        combination of the corresponding points $y(t_1), y(t_2), \dots,
-        y(t_{E+1})$. Specifically,
+        $E$-dimensional state space using their time lags. For example,
+        $x$ denotes the embedding of $X$ where $x(t)=\left(X(t), X(t-\tau),
+        \dots, X(t-(E-1) \tau)\right)$. $\tau$ is the time lag. $E$ is
+        empirically determined and usually $E<20$ in real-world datasets.
+    \item \textit{k-Nearest Neighbor search}: For each point $x(t)$ in
+        embedding $x$, $E+1$ nearest neighbors of $x(t)$ in the state space
+        are searched. We refer to the nearest neighbors as $x(t_1), x(t_2),
+        \dots, x(t_{E+1})$ and the Euclidean distance between $x(t)$ and
+        $x(t_i)$ as $d(t, t_i) =\lVert x(t) - x(t_i) \rVert$.
+    \item \textit{Prediction}: The prediction $\hat{y}(t)$ for a $y(t)$ is a
+        linear combination of points $y(t_1), y(t_2), \dots, y(t_{E+1})$.
+        Specifically,
         \begin{equation*}
             \hat{y}(t) = \sum^{E+1}_{i=1} \frac{w_i}{\sum^{E+1}_{i=1}{w_i}} \cdot y(t_i)
         \end{equation*}
         where
         \begin{equation*}
-            w_i = \exp{-\frac{d(t, t_i)}{\min{d(t, t_i)}}}
+            w_i = \exp\left\{ -\frac{d(t, t_i)}{\min{d(t, t_i)}}\right\}
         \end{equation*}
-        The first component of $\hat{y}(t)$ is $\hat{Y}(t)$.
-    \item Pearson's correlation $\rho$ between $Y$ and $\hat{Y}$ is computed
-        to assess the predictive skill. If $\rho$ is high, we conclude $Y$
-        ``CCM-causes'' $X$.
+        The prediction $\hat{Y}(t)$ for $Y(t)$ is made by extracting the first
+        component of $\hat{y}(t)$.
+    \item \textit{Assessing the prediction}: Pearson's correlation $\rho$
+        between $Y$ and $\hat{Y}$ is computed to assess the predictive skill.
+        If $\rho$ is high, we conclude that $Y$ ``CCM-causes'' $X$.
 \end{enumerate}
 
-These steps are repeated for all combinations of time series when performing
-all-to-all CCM between multiple time series. We showed in our previous
-work~\cite{mpedm} that one can precompute the neighbors for every point of $x$
-and then reuse the neighbors to make predictions for all target time series.
-This reduces the number of $k$-NN search and provides significant
-speedup~\cite{mpedm}.
-
-~\cite{Natsukawa2017,VanBerkel2020}
-
-% cite papers on EDM acceleration
-~\cite{Pu2019,Ma2017}.
+These steps are repeated for all pair of time series when performing
+pairwise CCM between multiple time series. We showed in our previous
+work~\cite{mpedm} that one can precompute the nearest neighbors for every
+point in $x$ (All $k$-NN search) and then use the nearest neighbors table to
+make predictions for all target time series. This reduces the number of $k$-NN
+search and provides significant speedup~\cite{mpedm}.
 
 \subsection{Challenges in mpEDM}\label{sec:challenges}
 
@@ -248,32 +245,34 @@ mpEDM\footnote{\url{https://github.com/keichi/mpEDM}}
 This subsection discusses the two major challenges in mpEDM: performance
 portability and flexibility.
 
-\subsubsection{Performance portability}
+\subsubsection{Performance portability}\label{sec:portability}
 
-mpEDM was based on ArrayFire~\cite{Malcolm2012}, a general purpose library for
-GPU computing. We chose ArrayFire primarily for its productivity and
-portability. ArrayFire provides CUDA and OpenCL backends to run on OpenCL
-devices. It also provides a CPU backend. Unfortunately, most of the functions
-provided by the CPU backend are neither multi-threaded nor vectorized. For this
-reason, we implemented our implementation for CPU\@.
+The GPU backend of mpEDM was based on ArrayFire~\cite{Malcolm2012}, a general
+purpose library for GPU computing. We chose ArrayFire primarily for its
+productivity and portability. ArrayFire provides CUDA and OpenCL backends to
+run on OpenCL devices. Although it also provides a CPU backend, most of the
+functions provided by the CPU backend are neither multi-threaded nor
+vectorized. For this reason, we implemented our implementation for CPU\@ using
+OpenMP\@.
 
-As a result, mpEDM had a ArrayFire-based GPU implementation and a CPU-based
-implementation of EDM, doubling the maintenance cost. Considering the
-diversifying target hardware, we wish a unified implementation that achieves
-consistent and reasonable performance across a diverse set of hardware.
+As a result, mpEDM had a ArrayFire-based GPU implementation and a OpenMP-based
+CPU implementation of EDM, which doubles the maintenance cost. Considering the
+diversifying target hardware, a unified implementation that achieves
+consistent and reasonable performance across a diverse set of hardware is
+required.
 
-\subsubsection{Flexibility}
+\subsubsection{Flexibility}\label{sec:flexibility}
 
 Since mpEDM was relying on ArrayFire's k-nearest neighbor search function
-(\texttt{nearestNeighbour()}), we were unable to modify nor tune the k-NN
+(\texttt{nearestNeighbour()}), we were unable to modify or tune the k-NN
 search to suit our use case and missed opportunities for further optimization.
-ArrayFire's nearest neighbor function accepts two input arrays, which are the
-reference and query points, and returns a list of closest reference points and
-their distances for each query point. This interface is simple and
-easy-to-use. However, when applying to EDM, the time-delayed embedding needs
-to be performed on CPU in advance and passed to ArrayFire. This hinders
-performance because it increases the amount of data that needs to be read from
-GPU memory.
+ArrayFire's nearest neighbor function accepts an array of reference and query
+points, and returns a array of closest reference points and their distances
+for each query point. This interface is simple and easy-to-use. However, when
+applying to EDM, the time-delayed embedding needs to be performed on CPU in
+advance and then passed to ArrayFire. This hinders performance because it
+increases the amount of data that needs to be copied between the CPU and the
+GPU and read from GPU memory.
 
 Another potential optimization opportunity is the partial sort function
 \texttt{topk()} invoked in the k-NN search. ArrayFire uses NVIDIA's
@@ -288,21 +287,34 @@ global top-$k$ elements are found. Even though this implementation is
 well-optimized, it may not be optimal for EDM since the targeted $k$ is
 relatively small ($\leq 20$).
 
-Finally, we were unable to implement lookups efficiently on GPU using
-ArrayFire. ArrayFire provides a construct called \textit{GFOR} that allows one
-to perform embarrassingly parallel for-loops in parallel. Although we were
-able to implement lookups using GFOR, the attained performance was poor. It
-was also challenging to manage memory consumption and memory copies because
-ArrayFire implicitly allocates, deallocates and copies arrays.
+Finally, we were unable to implement efficient lookups on GPU using ArrayFire.
+ArrayFire provides a construct for embarrassingly parallel computation called
+\textit{GFOR} that allows one to perform independent for-loops in parallel.
+Although we were able to implement lookups using GFOR, the attained
+performance was poor. Managing memory consumption and memory copies was also
+challenging because ArrayFire implicitly allocates, deallocates and copies
+arrays.
 
 \section{kEDM}\label{sec:proposal}
 
 \subsection{Overall Design}
 
-kEDM\footnote{\url{https://github.com/keichi/kEDM}} is a performance-portable
-implementation of EDM based on Kokkos. To ensure the correctness of the
-implementation, the output is validated against the output from mpEDM as well
-as the reference implementation pyEDM using automated unit tests.
+kEDM\footnote{\url{https://github.com/keichi/kEDM}} is our
+performance-portable implementation of EDM based on Kokkos. To ensure the
+correctness of the implementation, the output is validated against the output
+from mpEDM as well as the reference implementation pyEDM using automated unit
+tests.
+
+Prior to implementing kEDM, we have examined a number of popular performance
+portability frameworks. These include OpenMP, OpenACC, OpenCL and SYCL\@. We
+chose Kokkos  because recent studies~\cite{Martineau2017, Deakin2019, Deakin2020}
+have shown that it delivers portable performance on a large set of devices
+compared to its alternatives. In addition, it has already been adopted by
+multiple production applications~\cite{Sprague2020,Holmen2017,Demeshko2019}.
+SYCL and OpenMP are attractive choices as they have grown rapidly over the
+last few years in terms of hardware coverage and delivered performance, but we
+still consider them immature compared to Kokkos at the point of writing this
+paper.
 
 \subsection{Kokkos}
 
@@ -369,17 +381,6 @@ KOKKOS_LAMBDA(const member_type &member) {
     });
 });
 \end{lstlisting}
-
-Prior to implementing kEDM, we have examined a number of popular performance
-portability frameworks. These include OpenMP, OpenACC, OpenCL and SYCL\@. We
-chose Kokkos  because recent studies~\cite{Martineau2017, Deakin2019, Deakin2020}
-have shown that it delivers portable performance on a large set of devices
-compared to its alternatives. In addition, it has already been adopted by
-multiple production applications~\cite{Sprague2020,Holmen2017,Demeshko2019}.
-SYCL and OpenMP are attractive choices as they have grown rapidly over the
-last few years in terms of hardware coverage and delivered performance, but we
-still consider them immature compared to Kokkos at the point of writing this
-paper.
 
 \subsection{All k-Nearest Neighbor Search}
 
@@ -507,35 +508,52 @@ with Kokkos 3.2 on both machines. On Aori, we used AMD Optimizing C/C++ Compiler
 
 \subsection{Comparison with mpEDM}
 
-\begin{table*}
-\centering
-\caption{Benchmark results using real-world datasets}%
-\label{tbl:real-world}
-\begin{tabular}{@{}lrrrrrrrr@{}}
-\toprule
+\subsubsection{Micro benchmarks}
 
-                     & \multicolumn{1}{c}{} & \multicolumn{1}{c}{} & \multicolumn{3}{c}{V100} & \multicolumn{3}{c}{EPYC 7742} \\ \cmidrule(l){4-6}  \cmidrule(l){7-9}
-Dataset              & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}\# of\\ Time Series\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}\# of\\ Time Steps\end{tabular}} & kEDM & mpEDM & Speedup & kEDM & mpEDM & Speedup \\ \midrule
-Fish1\_Normo & 154    & 1,600  &      3s &     11s & 3.67$\times$ &      3s &     s &         \\
-Fly80XY      & 82     & 10,608 &     11s &     50s & 4.55$\times$ &     22s &     s &         \\
-Genes        & 45,318 & 96     &    344s &    334s & 0.97$\times$ &    115s &     s &         \\
-Subject6     & 92,538 & 3,780  &  5,391s & 29,579s &              & 13,627s &     s &         \\
-F1           & 8,520  & 29,484 & 11,372s &         &              & 23,482s  &     s &         \\ \bottomrule
-\end{tabular}
-\end{table*}
+We implemented micro benchmarks to measure the performance of the individual
+kernels we described in Section~\ref{sec:proposal} and compare them with
+mpEDM\@.
+
+Figure~\ref{fig:breakdown-knn-v100} shows the runtime of the All k-NN search
+of kEDM and mpEDM on NVIDIA V100. The result indicates that the pairwise
+distance calculation in kEDM is significantly faster than mpEDM (up to
+6.6$\times$). This is because the embedding is done during the distance
+calculation on the GPU\@. The partial sort is also faster if $E$ is small. If
+$E=1$, kEDM is 6.2$\times$ faster than mpEDM\@. However, kEDM's performance
+degrades as $E$ increases and slightly underperforms mpEDM when $E=20$.
+Another issue is warp divergence.
+
+Figure~\ref{fig:breakdown-knn-epyc} shows the runtime of the All k-NN search
+on AMD EPYC 7742. It should be noted that the partial sort algorithm in mpEDM
+uses a max heap to store the elements. Since the $E$ we are interested is
+small, the difference between linear time and logarithmic time is not visible.
+
+Figures~\ref{fig:breakdown-lookup-v100} and~\ref{fig:breakdown-lookup-epyc}
+show the runtime of the lookup on V100 and EPYC 7742, respectively. Note that
+we only measured kEDM on V100 since mpEDM does not have a lookup kernel for
+GPU as described in Section~\ref{sec:flexibility}. V100 consistently
+outperforms EPYC 7742 ranging from 3.0$\times$ to 4.0$\times$. Therefore, we
+can expect significant speed up
 
 \begin{figure}
     \centering
     \includegraphics{figs/breakdown_knn_v100}
-    \caption{Breakdown of kNN runtime on V100 ($L=10^4$)}%
+    \caption{Breakdown of All k-NN search runtime on V100 ($L=10^4$)}%
     \label{fig:breakdown-knn-v100}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics{figs/breakdown_knn_epyc}
-    \caption{Breakdown of kNN runtime on EPYC 7742 ($L=10^4$)}%
+    \caption{Breakdown of All k-NN search runtime on EPYC 7742 ($L=10^4$)}%
     \label{fig:breakdown-knn-epyc}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics{figs/runtime_lookup_v100}
+    \caption{Runtime of lookups on V100 ($L=10^4, N=10^5$)}%
+    \label{fig:breakdown-lookup-v100}
 \end{figure}
 
 \begin{figure}
@@ -545,12 +563,32 @@ F1           & 8,520  & 29,484 & 11,372s &         &              & 23,482s  &  
     \label{fig:breakdown-lookup-epyc}
 \end{figure}
 
-\begin{figure}
-    \centering
-    \includegraphics{figs/runtime_lookup_v100}
-    \caption{Runtime of lookups on V100 ($L=10^4, N=10^5$)}%
-    \label{fig:breakdown-lookup-v100}
-\end{figure}
+\subsubsection{Real-world datasets}
+
+We used several real-world datasets with diverse number and length of time
+series that reflect the variety of use cases.
+% Need short description of the datasets from Gerald
+Table~\ref{tbl:real-world} shows the runtime for processing each dataset The
+results indicate that kEDM outperforms mpEDM in most cases. In particular,
+kEDM shows significantly better (up to 5.5$\times$) performance than mpEDM on
+an Ika\@. This is because kEDM performs the lookups on the GPU instead of the
+CPU\@.
+
+\begin{table*}
+\centering
+\caption{Benchmark results using real-world datasets}%
+\label{tbl:real-world}
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+             & \multicolumn{1}{c}{} & \multicolumn{1}{c}{} & \multicolumn{3}{c}{V100 \& Xeon Gold 6148 } & \multicolumn{3}{c}{EPYC 7742} \\ \cmidrule(l){4-6}  \cmidrule(l){7-9}
+Dataset      & \multicolumn{1}{c}{\# of Time Series} & \multicolumn{1}{c}{\# of Time Steps} & kEDM & mpEDM & Speedup & kEDM & mpEDM & Speedup \\ \midrule
+Fish1\_Normo & 154    & 1,600  &      3s &     11s & 3.67$\times$ &      3s &      4s & 1.33$\times$ \\
+Fly80XY      & 82     & 10,608 &     11s &     50s & 4.55$\times$ &     22s &     30s & 1.36$\times$ \\
+Genes\_MEF   & 45,318 & 96     &    344s &    334s & 0.97$\times$ &    115s &    139s & 1.21$\times$ \\
+Subject6     & 92,538 & 3,780  &  5,391s & 29,579s & 5.49$\times$ & 13,627s & 11,571s & 0.85$\times$ \\
+F1           & 8,520  & 29,484 & 11,372s & 20,128s & 1.77$\times$ & 23,482s &       s &     $\times$ \\ \bottomrule
+\end{tabular}
+\end{table*}
 
 \subsection{Efficiency}
 
