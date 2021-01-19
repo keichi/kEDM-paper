@@ -319,34 +319,33 @@ paper.
 \subsection{Kokkos}
 
 Kokkos~\cite{Edwards2014} is a performance portability framework developed at
-the Sandia National Laboratories. It abstracts away the differences between
-low-level programming models such as OpenMP, CUDA, ROCm and exposes a
-high-level C++ interface to the developer. Kokkos allows developers to build a
-cross-platform and performance-portable application on a single source code
-base.
+the Sandia National Laboratories. The aim of Kokkos is to abstract away the
+differences between low-level programming models such as OpenMP, CUDA and HIP
+and exposes a high-level C++ interface to the developer. Kokkos allows
+developers to build cross-platform and performance-portable applications on a
+single source code base.
 
-In the Kokkos programming model, the developer specifies (1) the parallel
-pattern, (2) computational body, and (3) execution policy of a loop. Available
-parallel patterns include parallel-for, parallel-reduce and parallel-scan. The
-computational body of a loop is given as a C++ 11 lambda function.
+To parallelize a loop the Kokkos programming model, the developer specifies (1)
+the parallel pattern, (2) computational body, and (3) execution policy of the
+loop. Available parallel patterns include parallel-for, parallel-reduce and
+parallel-scan. The computational body of a loop is given as a lambda function.
 
-The execution policy defines how a loop is executed. \texttt{RangePolicy}
-defines a 1D range of indices. \texttt{TeamPolicy} and \texttt{TeamThreadRange}
-is used to coordinate teams of threads to exploit the hierarchical parallelism
-of the hardware. On a GPU, teams and threads map to thread blocks and threads
-within thread blocks, respectively. On a CPU, teams map to physical cores and
-threads map to hardware threads within cores. \texttt{TeamPolicy} gives access
-to team-private and thread-private scratch memory, an abstraction of shared
-memory in GPUs. Each execution policy is bound to an execution space, an
-abstraction of where the code runs. The latest release of Kokkos supports
-Serial, OpenMP, OpenMP Target, CUDA, ROCm, Pthread, HIP and HPX\@. A SYCL
-backend is also in development.
+The execution policy defines how a loop is executed. For example,
+\texttt{RangePolicy} defines a simple 1D range of indices. \texttt{TeamPolicy}
+and \texttt{TeamThreadRange} are used to launch teams of threads to exploit
+the hierarchical parallelism of the hardware. On a GPU, teams and threads map
+to thread blocks and threads within thread blocks, respectively. On a CPU,
+teams map to physical cores and threads map to hardware threads within cores.
+\texttt{TeamPolicy} gives access to team-private and thread-private scratch
+memory, an abstraction of shared memory in GPUs. Each execution policy is
+bound to an execution space, an abstraction of where the code runs. The latest
+release of Kokkos supports Serial, OpenMP, OpenMP Target, CUDA, HIP, Pthread,
+HPX and SYCL\@.
 
 \textit{View} is the fundamental data type in Kokkos and represents a
-multidimensional array. Views are allocated explicitly by the user and
-deallocated automatically by Kokkos using reference counting.
-Each view is associated to a memory space, an abstraction of
-where the data resides.
+multidimensional array. Views are explicitly allocated by the user and
+deallocated automatically by Kokkos using reference counting. Each view is
+associated to a memory space, an abstraction of where the data resides.
 
 Listing~\ref{lst:basic} shows a vector addition  kernel implemented in Kokkos.
 In this example, a parallel-for loop is launched that iterates over the 1D
@@ -362,7 +361,7 @@ KOKKOS_LAMBDA(int i) {
 Listing~\ref{lst:hierarchical} shows a matrix vector multiplication kernel
 using hierarchical parallelism. The outer parallel-for loop launches $M$ teams
 that each computes one row of the output vector $y$. The inner parallel-reduce
-computes the dot product of one row in $A$ and $x$.
+computes the dot product between one row in $A$ and $x$.
 
 \begin{lstlisting}[caption={Hierarchical data parallel loop},label={lst:hierarchical}]
 parallel_for(TeamPolicy<ExecSpace>(M, AUTO),
@@ -384,15 +383,14 @@ KOKKOS_LAMBDA(const member_type &member) {
 
 \subsection{All k-Nearest Neighbor Search}
 
-We implement the All k-NN search using an exhaustive approach. That is, we
-first calculate the pairwise distances between all embedded library points in
-the state space and obtain an all-to-all distance matrix. Subsequently, each
-row of the obtained distance matrix is partially sorted to find the distances
-and indices of the points
-to~\cite{Garcia2008,Garcia2010}.
+We implement the All k-NN search using an exhaustive approach similar
+to~\cite{Garcia2008,Garcia2010}. That is, we first calculate the pairwise
+distances between all embedded library points in the state space and obtain a
+pairwise distance matrix. Subsequently, each row of the obtained distance
+matrix is partially sorted to find the distances and indices of the points to.
 
-\cite{Johnson2019}
-\cite{Shanbhag2018}
+% \cite{Johnson2019}
+% \cite{Shanbhag2018}
 
 \subsubsection{Pairwise distance kernel}
 As discussed in Section~\ref{sec:challenges}, performing the time-delayed
@@ -401,19 +399,19 @@ inefficient since it increases memory access. Instead, we perform the time
 delayed embedding and distance calculation at the same time.
 
 Algorithm~\ref{alg:distances} shows the pairwise distance calculation
-algorithm in kEDM\@. The outer-most $i$-loop is mapped to teams while the
-$j$-loop is mapped to threads within a team. A consideration on CPU is which
-loop to vectorize. Since the inner-most $k$-loop is short ($E \leq 20$) in our
-use case, vectorizing it is not profitable. We therefore use \textit{SIMD
-types}\footnote{\url{https://github.com/Kokkos/simd-math}} to vectorize the
+algorithm in kEDM\@. Using Kokkos' \texttt{TeamPolicy} and
+\texttt{ThreadRange}, we map the outer-most $i$-loop to teams and the $j$-loop to
+threads within a team. A consideration on CPU is which loop to vectorize.
+Since the inner-most $k$-loop is short ($E \leq 20$) in our use case,
+vectorizing it is not profitable. We therefore use \textit{SIMD types}
+\footnote{\url{https://github.com/Kokkos/simd-math}} to vectorize the
 $j$-loop. SIMD types are short vector with overloaded operators that map to
 intrinsic functions. SIMD types are mapped to scalars on GPUs and do not cause
 any overhead.
-
 Note that the library time series is reused if $E > 1$ and we can expect
 more reuse with larger $E$. In addition, we explicitly cache $\mathrm{library}
-(k \tau + i)$ (where $k=1 \dots E$) on team-local scratch memory.
-% memory alignment
+(k \tau + i)$ (where $k=1 \dots E$) on team-local scratch memory to speed up
+memory access.
 
 \begin{algorithm}
     \SetAlgoLined
@@ -445,12 +443,34 @@ The top-$k$ kernel is particularly challenging to implement in Kokkos, because
 \item \textbf{TODO} automatic tuning of team size
 \end{itemize}
 
-\begin{figure}
-    \centering
-    \includegraphics[width=.8\columnwidth]{figs/sorting}
-    \caption{Top-$k$ sorting algorithm}%
-    \label{fig:topk}
-\end{figure}
+% \begin{figure}
+    % \centering
+    % \includegraphics[width=.8\columnwidth]{figs/sorting}
+    % \caption{Top-$k$ sorting algorithm}%
+    % \label{fig:topk}
+% \end{figure}
+
+\begin{algorithm}
+    \SetAlgoLined
+    \DontPrintSemicolon
+    \KwIn{Pairwise distance matrix $D$}
+    \KwOut{Top-$k$ distance matrix $D_k$ and index matrix $I_k$}
+    \tcp{\texttt{TeamPolicy}}
+    \PFor{$i \leftarrow 1$ \KwTo $L$}{
+        \tcp{\texttt{ThreadRange}}
+        \PFor{$j \leftarrow 1$ \KwTo $L$}{
+            Insert $D(i, j)$ and $j$ into local priority queue\;
+        }
+        \For{$j \leftarrow 1$ \KwTo $k$}{
+            \For{$j \leftarrow 1$ \KwTo \# of teams}{
+                Insert $D(i, j)$ and $j$ into local priority queue\;
+                $D_k(i, j) \leftarrow$ Pop element from priority queue\;
+            }
+        }
+    }
+    \caption{Partial sort}%
+    \label{alg:partial-sort}
+\end{algorithm}
 
 \subsection{Lookup}
 
@@ -502,9 +522,9 @@ We evaluated kEDM on two compute servers installed at the Salk Institute: (1)
 Ika and (2) Aori. Ika is equipped with two sockets of 20-core Intel Xeon Gold
 6148 CPUs, one NVIDIA V100 PCIe card and 376 GiB of RAM\@. Aori is equipped with
 two sockets of 64-core AMD EPYC 7742 CPUs and 1 TiB of RAM\@. kEDM was built
-with Kokkos 3.2 on both machines. On Aori, we used AMD Optimizing C/C++ Compiler
-(AOCC) 2.2.0, a fork of Clang by AMD. On Ika, we used NVIDIA CUDA Compiler (NVCC)
-10.1.
+with Kokkos 3.2 on both machines. On Aori, we used the AMD Optimizing C/C++
+Compiler (AOCC) 2.2.0, a fork of Clang by AMD. On Ika, we used the NVIDIA CUDA
+Compiler (NVCC) 10.1.
 
 \subsection{Comparison with mpEDM}
 
