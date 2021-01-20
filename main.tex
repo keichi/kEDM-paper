@@ -1,27 +1,16 @@
-\documentclass[conference]{IEEEtran}
+\documentclass[sigconf]{acmart}
 
 \RequirePackage[l2tabu, orthodox]{nag}
 
-\usepackage{amsmath}
 \usepackage[ruled,vlined,linesnumbered]{algorithm2e}
 \usepackage[english]{babel}
 \usepackage{booktabs}
-\usepackage[hang]{caption}
-\usepackage{cite}
-% \usepackage{flushend}
-\usepackage[bottom,hang]{footmisc}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
 \usepackage[utf8]{inputenc}
-\usepackage{icomma}
 \usepackage{listings}
-\usepackage{newtxtext}
-\usepackage{newtxmath}
 \usepackage{url}
 \usepackage{xcolor}
-
-% Allow PDF 1.7 documents to be included with \includegraphics
-\pdfminorversion=7
 
 % Suppress "multiple pdfs with page group included in a single page" warning
 \pdfsuppresswarningpagegroup=1
@@ -62,38 +51,40 @@
 % algorithme2
 \SetKwFor{PFor}{parallel for}{do}{end}
 
+\acmConference[PEARC '21]{PEARC '21: Practice and Experience in Advanced
+Research Computing}{July 18--22, 2021}{Virtual Conference}
+
 \title{kEDM: A Performance-portable Implementation of Empirical Dynamical Modeling}
 
-\author{%
-    \IEEEauthorblockN{%
-        Keichi Takahashi,\\Wassapon Watanakeesuntorn,\\Kohei Ichikawa
-    } \\
-    \IEEEauthorblockA{%
-        Nara Institute of Science and Technology\\
-        Nara, Japan\\
-        \{keichi, wassapon.watanakeesuntorn.wq0,\\ ichikawa\}@is.naist.jp
-    }
-    \and
-    \IEEEauthorblockN{%
-        George Sugihara
-    } \\
-    \IEEEauthorblockA{%
-        University of California San Diego\\
-        California, USA\\
-        gsugihara@ucsd.edu
-    }
-    \and
-    \IEEEauthorblockN{%
-        Gerald M. Pao
-    } \\
-    \IEEEauthorblockA{%
-        Salk Institute for Biological Studies\\
-        California, USA\\
-        pao@salk.edu
-    }
+\author{Keichi Takahashi}
+\email{keichi@is.naist.jp}
+\author{Wassapon Watanakeesuntorn}
+\email{wassapon.watanakeesuntorn.wq0}
+\author{Kohei Ichikawa}
+\email{ichikawa@is.naist.jp}
+\affiliation{%
+  \institution{Nara Institute of Science and Technology}
+  \city{Ikoma}
+  \country{Nara}
 }
 
-\maketitle
+\author{George Sugihara}
+\email{gsugihara@ucsd.edu}
+\affiliation{%
+  \institution{University of California San Diego}
+  \city{La Jolla}
+  \city{California}
+  \country{USA}
+}
+
+\author{Gerald M. Pao}
+\email{pao@salk.edu}
+\affiliation{%
+  \institution{Salk Institute for Biological Studies}
+  \city{La Jolla}
+  \city{California}
+  \country{USA}
+}
 
 \begin{abstract}
 Recent rapid scale out of high performance computing systems has
@@ -120,12 +111,38 @@ to demonstrate how dynamically controlling the interconnects can reduce
 congestion and potentially improve the performance of applications.
 \end{abstract}
 
-\begin{IEEEkeywords}
-    Empirical Dynamical Modeling, Performance Portability, High-Performance
-    Computing
-\end{IEEEkeywords}
+\keywords{Empirical Dynamical Modeling, Performance Portability,
+High-Performance Computing}
+
+% https://dl.acm.org/ccs
+\begin{CCSXML}
+<ccs2012>
+   <concept>
+       <concept_id>10010147.10010169</concept_id>
+       <concept_desc>Computing methodologies~Parallel computing methodologies</concept_desc>
+       <concept_significance>500</concept_significance>
+       </concept>
+   <concept>
+       <concept_id>10002944.10011123.10011674</concept_id>
+       <concept_desc>General and reference~Performance</concept_desc>
+       <concept_significance>300</concept_significance>
+       </concept>
+ </ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Computing methodologies~Parallel computing methodologies}
+\ccsdesc[300]{General and reference~Performance}
+
+\maketitle
 
 \section{Introduction}
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=1.0\linewidth]{figs/xmap_overview}
+    \caption{Overview of Convergent Cross Mapping}%
+    \label{fig:edm}
+\end{figure*}
 
 Empirical Dynamical Modeling (EDM)~\cite{Chang2017} is a state-of-the-art
 non-linear time series analysis framework used for various tasks such as
@@ -170,13 +187,6 @@ facilitates the future development and porting to new hardware. Furthermore,
 we identify and take advantage of optimization opportunities in mpEDM and
 achieve 3--4$\times$ higher performance on NVIDIA V100 GPUs.
 
-\begin{figure*}
-    \centering
-    \includegraphics[width=1.0\linewidth]{figs/xmap_overview}
-    \caption{Overview of Convergent Cross Mapping}%
-    \label{fig:edm}
-\end{figure*}
-
 The rest of this paper is organized as follows. Section~\ref{sec:background}
 first introduces EDM briefly and then discusses the challenges in mpEDM\@.
 Section~\ref{sec:proposal} presents kEDM, a novel performance-portable
@@ -206,14 +216,14 @@ steps are performed:
 
 \begin{enumerate}
     \item \textit{Embedding}: Time series $X$ and $Y$ are embedded into
-        $E$-dimensional state space using their time lags. For example,
-        $x$ denotes the embedding of $X$ where $x(t)=\left(X(t), X(t-\tau),
-        \dots, X(t-(E-1) \tau)\right)$. $\tau$ is the time lag. $E$ is
+        $E$ dimensional state space using their time lags. For example,
+        $x$ denotes the embedding of $X$ where $x(t)=(X(t), X(t-\tau),
+        \dots, X(t-(E-1) \tau))$. $\tau$ is the time lag. $E$ is
         empirically determined and usually $E<20$ in real-world datasets.
     \item \textit{k-Nearest Neighbor search}: For each point $x(t)$ in
         embedding $x$, $E+1$ nearest neighbors of $x(t)$ in the state space
-        are searched. We refer to the nearest neighbors as $x(t_1), x(t_2),
-        \dots, x(t_{E+1})$ and the Euclidean distance between $x(t)$ and
+        are searched. We refer to the nearest neighbors as $x(t_1)$, $x(t_2)$,
+        \dots, $x(t_{E+1})$ and the Euclidean distance between $x(t)$ and
         $x(t_i)$ as $d(t, t_i) =\lVert x(t) - x(t_i) \rVert$.
     \item \textit{Prediction}: The prediction $\hat{y}(t)$ for a $y(t)$ is a
         linear combination of points $y(t_1), y(t_2), \dots, y(t_{E+1})$.
@@ -671,9 +681,10 @@ collect the required metrics on GPU and CPU, respectively.
 Python interface
 AMD GPUs and A64FX
 
-\section*{Acknowledgements}
+\begin{acks}
 This work was supported by JSPS KAKENHI Grant Number JP20K19808 (KT) and an
 Innovation grant by the Kavli Institute for Brain and Mind (GMP).
+\end{acks}
 
 \clearpage
 
