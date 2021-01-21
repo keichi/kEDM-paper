@@ -64,8 +64,8 @@ Research Computing}{July 18--22, 2021}{Virtual Conference}
 \email{ichikawa@is.naist.jp}
 \affiliation{%
   \institution{Nara Institute of Science and Technology}
-  \city{Ikoma}
-  \country{Nara}
+  \city{Nara}
+  \country{Japan}
 }
 
 \author{George Sugihara}
@@ -73,7 +73,7 @@ Research Computing}{July 18--22, 2021}{Virtual Conference}
 \affiliation{%
   \institution{University of California San Diego}
   \city{La Jolla}
-  \city{California}
+  \state{California}
   \country{USA}
 }
 
@@ -82,33 +82,25 @@ Research Computing}{July 18--22, 2021}{Virtual Conference}
 \affiliation{%
   \institution{Salk Institute for Biological Studies}
   \city{La Jolla}
-  \city{California}
+  \state{California}
   \country{USA}
 }
 
 \begin{abstract}
-Recent rapid scale out of high performance computing systems has
-rapidly and continuously increased the scale and complexity of the
-interconnects. As a result, current static and over-provisioned
-interconnects are becoming cost-ineffective. Against this background, we have
-been working on the integration of network programmability into
-the interconnect control, based on the idea that dynamically controlling
-the packet flow in the interconnect according to the communication pattern
-of applications can increase the utilization of interconnects and improve
-application performance. Interconnect simulators come in handy especially
-when investigating the performance characteristics of interconnects with
-different topologies and parameters. However, little effort has been put
-towards the simulation of packet flow in dynamically controlled interconnects,
-while simulators for static interconnects have been extensively researched
-and developed. To facilitate analysis on the performance
-characteristics of dynamic interconnects, we have developed PFAnalyzer.
-PFAnalyzer is a toolset composed of PFSim, an interconnect simulator
-specialized for dynamic interconnects, and PFProf, a profiler.
-PFSim allows interconnect researchers and designers to investigate
-congestion in the interconnect for an arbitrary cluster configuration and
-a set of communication patterns collected by PFProf. PFAnalyzer is used
-to demonstrate how dynamically controlling the interconnects can reduce
-congestion and potentially improve the performance of applications.
+Empirical Dynamical Modeling (EDM) is a state-of-the-art non-linear time
+series analysis framework. Despite its wide applicability, EDM is
+computationally expensive and thus the scale of the datasets that can be
+applied to was limited. To overcome this obstacle, researchers have attempted
+to accelerate EDM from both algorithmic and implementational aspects. In our
+previous work, we have developed mpEDM, a massively parallel implementation of
+EDM targeting HPC systems. However, mpEDM maintains different backends for
+different architectures. This becomes a burden to port to new hardware in the
+current diversifying landscape of HPC systems. In this paper, we design and
+develop kEDM, a performance portable implementation of EDM based on the Kokkos
+performance portability framework. The new implementation is single-source and
+runs on both CPUs and GPUs. Several inefficiencies have been removed from
+mpEDM, resulting to a $5.49\times$ speedup in convergent cross mapping
+computation using real-world datasets.
 \end{abstract}
 
 \keywords{Empirical Dynamical Modeling, Performance Portability,
