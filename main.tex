@@ -59,7 +59,7 @@ Research Computing}{July 18--22, 2021}{Virtual Conference}
 \author{Keichi Takahashi}
 \email{keichi@is.naist.jp}
 \author{Wassapon Watanakeesuntorn}
-\email{wassapon.watanakeesuntorn.wq0}
+\email{wassapon.watanakeesuntorn.wq0@is.naist.jp}
 \author{Kohei Ichikawa}
 \email{ichikawa@is.naist.jp}
 \affiliation{%
@@ -361,7 +361,7 @@ Listing~\ref{lst:basic} shows a vector addition  kernel implemented in Kokkos.
 In this example, a parallel-for loop is launched that iterates over the 1D
 range $1..N$.
 
-\begin{lstlisting}[caption={Basic data parallel loop},label={lst:basic}]
+\begin{lstlisting}[caption={Basic data parallel loop},label={lst:basic},float]
 Kokkos::parallel_for(RangePolicy<ExecSpace>(N),
 KOKKOS_LAMBDA(int i) {
     y(i) = a * x(i) + y(i);
@@ -373,7 +373,7 @@ using hierarchical parallelism. The outer parallel-for loop launches $M$ teams
 that each computes one row of the output vector $y$. The inner parallel-reduce
 computes the dot product between one row in $A$ and $x$.
 
-\begin{lstlisting}[caption={Hierarchical data parallel loop},label={lst:hierarchical}]
+\begin{lstlisting}[caption={Hierarchical data parallel loop},label={lst:hierarchical},float]
 parallel_for(TeamPolicy<ExecSpace>(M, AUTO),
 KOKKOS_LAMBDA(const member_type &member) {
     int i = member.team_rank();
@@ -542,9 +542,7 @@ with Kokkos 3.2 on both machines. On Aori, we used the AMD Optimizing C/C++
 Compiler (AOCC) 2.2.0, a fork of Clang by AMD. On Ika, we used the NVIDIA CUDA
 Compiler (NVCC) 10.1.
 
-\subsection{Comparison with mpEDM}
-
-\subsubsection{Micro benchmarks}
+\subsection{Micro benchmarks}
 
 We implemented micro benchmarks to measure the performance of the individual
 kernels we described in Section~\ref{sec:proposal} and compare them with
@@ -606,7 +604,7 @@ cache hit ratio.
     \label{fig:breakdown-lookup-epyc}
 \end{figure}
 
-\subsubsection{Real-world datasets}
+\subsection{Real-world datasets}
 
 We used several real-world datasets with diverse number and length of time
 series that reflect the variety of use cases.
@@ -643,10 +641,24 @@ theoretical peak performance instead. We followed the methodology presented
 in~\cite{Yang2020a,Yang2020b} to measure the arithmetic intensity and the
 attained FLOP/s. Nvprof 10.1 and likwid~\cite{Treibig2010} 5.0.1 were used to
 collect the required metrics on GPU and CPU, respectively.
+We used an artificial dataset containing $10^5$ time series each having $10^4$
+time series. This scale reflects our largest use case.
 
 % 1.38*80*32*4/1024 = 13.8 TiB/s
 % (frequency)*(# of SMs)*(bank size)*(bank width)
 % memory alignment issue and vectorized loads/stores
+
+Figures \ref{fig:roofline-distances-v100} and \ref{fig:roofline-distances-epyc}
+are roofline plots for the pairwise distance kernel on V100 and EPYC 7742,
+respectively. As expected, the arithmetic intensity of the pairwise distance
+kernel increased with the embedding dimension since the reuse of the time
+series improves. On V100, the kernel was bounded by HBM bandwidth when $E=1$.
+However, the kernel was not able to reach the rooflines as $E$ increases. We
+found using NVIDIA Nsight profiler that the load store units were the
+bottleneck because of too many memory transactions. A common technique to
+reduce memory transaction is to use vectorize loads/stores. In this, it is not
+possible because the memory alignment depends on user-supplied parameters $E$
+and $\tau$. On EPYC 7742, the kernel is clearly hitting the L3 cache roofline.
 
 \begin{figure}
     \centering
@@ -661,6 +673,8 @@ collect the required metrics on GPU and CPU, respectively.
     \caption{Roofline analysis of pairwise distance kernel on EPYC 7742 ($L=10^4$)}%
     \label{fig:roofline-distances-epyc}
 \end{figure}
+
+Figures \ref{fig:roofline-lookup-v100} and \ref{fig:roofline-lookup-eypc}
 
 \begin{figure}
     \centering
