@@ -352,6 +352,10 @@ associated to a memory space, an abstraction of where the data resides.
 Listing~\ref{lst:basic} shows a vector addition  kernel implemented in Kokkos.
 In this example, a parallel-for loop is launched that iterates over the 1D
 range $1..N$.
+Listing~\ref{lst:hierarchical} shows a matrix vector multiplication kernel
+using hierarchical parallelism. The outer parallel-for loop launches $M$ teams
+that each computes one row of the output vector $y$. The inner parallel-reduce
+computes the dot product between one row in $A$ and $x$.
 
 \begin{lstlisting}[caption={Basic data parallel loop},label={lst:basic},float]
 Kokkos::parallel_for(RangePolicy<ExecSpace>(N),
@@ -359,11 +363,6 @@ KOKKOS_LAMBDA(int i) {
     y(i) = a * x(i) + y(i);
 });
 \end{lstlisting}
-
-Listing~\ref{lst:hierarchical} shows a matrix vector multiplication kernel
-using hierarchical parallelism. The outer parallel-for loop launches $M$ teams
-that each computes one row of the output vector $y$. The inner parallel-reduce
-computes the dot product between one row in $A$ and $x$.
 
 \begin{lstlisting}[caption={Hierarchical data parallel loop},label={lst:hierarchical},float]
 parallel_for(TeamPolicy<ExecSpace>(M, AUTO),
@@ -615,11 +614,12 @@ CPU\@.
 \toprule
              & \multicolumn{1}{c}{} & \multicolumn{1}{c}{} & \multicolumn{3}{c}{V100 \& Xeon Gold 6148 } & \multicolumn{3}{c}{EPYC 7742} \\ \cmidrule(l){4-6}  \cmidrule(l){7-9}
 Dataset      & \multicolumn{1}{c}{\# of Time Series} & \multicolumn{1}{c}{\# of Time Steps} & kEDM & mpEDM & Speedup & kEDM & mpEDM & Speedup \\ \midrule
-Fish1\_Normo & 154    & 1,600  &      3s &     11s & 3.67$\times$ &      3s &      4s & 1.33$\times$ \\
-Fly80XY      & 82     & 10,608 &     11s &     50s & 4.55$\times$ &     22s &     30s & 1.36$\times$ \\
-Genes\_MEF   & 45,318 & 96     &    344s &    334s & 0.97$\times$ &     96s &    139s & 1.45$\times$ \\
-Subject6     & 92,538 & 3,780  &  5,391s & 29,579s & 5.49$\times$ & 12,145s & 11,571s & 0.95$\times$ \\
-F1           & 8,520  & 29,484 & 11,372s & 20,128s & 1.77$\times$ & 23,001s & 19,950s & 0.87$\times$ \\ \bottomrule
+Fish1\_Normo &  154    & 1,600  &      3s &     11s & 3.67$\times$ &      3s &      4s & 1.33$\times$ \\
+Fly80XY      &  82     & 10,608 &     11s &     50s & 4.55$\times$ &     22s &     30s & 1.36$\times$ \\
+Genes\_MEF   &  45,318 & 96     &    344s &    334s & 0.97$\times$ &     96s &    139s & 1.45$\times$ \\
+Subject6     &  92,538 & 3,780  &  5,391s & 29,579s & 5.49$\times$ & 12,145s & 11,571s & 0.95$\times$ \\
+Subject11    & 101,729 & 8,528  & 20,517s &       s &     $\times$ & 43,812s &       s &     $\times$ \\
+F1           &  8,520  & 29,484 & 11,372s & 20,128s & 1.77$\times$ & 23,001s & 19,950s & 0.87$\times$ \\ \bottomrule
 \end{tabular}
 \end{table*}
 
@@ -641,16 +641,17 @@ time series. This scale reflects our largest use case.
 % memory alignment issue and vectorized loads/stores
 
 Figures \ref{fig:roofline-distances-v100} and \ref{fig:roofline-distances-epyc}
-are roofline plots for the pairwise distance kernel on V100 and EPYC 7742,
-respectively. As expected, the arithmetic intensity of the pairwise distance
-kernel increased with the embedding dimension since the reuse of the time
-series improves. On V100, the kernel was bounded by HBM bandwidth when $E=1$.
-However, the kernel was not able to reach the rooflines as $E$ increases. We
-found using NVIDIA Nsight profiler that the load store units were the
-bottleneck because of too many memory transactions. A common technique to
-reduce memory transaction is to use vectorize loads/stores. In this, it is not
-possible because the memory alignment depends on user-supplied parameters $E$
-and $\tau$. On EPYC 7742, the kernel is clearly hitting the L3 cache roofline.
+show the hierarchical roofline models for the pairwise distance kernel on V100
+and EPYC 7742, respectively. As expected, the arithmetic intensity of the
+pairwise distance kernel increased with the embedding dimension since the
+reuse of the time series improves. On V100, the kernel was bounded by HBM
+bandwidth when $E=1$. However, the kernel was not able to reach the rooflines
+as $E$ increases. We found using NVIDIA Nsight profiler that the load store
+units were the bottleneck because of too many memory transactions. A common
+technique to reduce memory transaction is to use vectorize loads/stores. In
+this, it is not possible because the memory alignment depends on user-supplied
+parameters $E$ and $\tau$. On EPYC 7742, the kernel is clearly hitting the L3
+cache roofline.
 
 \begin{figure}
     \centering
@@ -666,7 +667,12 @@ and $\tau$. On EPYC 7742, the kernel is clearly hitting the L3 cache roofline.
     \label{fig:roofline-distances-epyc}
 \end{figure}
 
-Figures \ref{fig:roofline-lookup-v100} and \ref{fig:roofline-lookup-eypc}
+Figures \ref{fig:roofline-lookup-v100} and \ref{fig:roofline-lookup-eypc} show
+the rooflines for the lookup kernel on V100 and EPYC 7742, respectively.
+These plots indicate that the lookup kernel is bounded by L2 cache on V100 and
+L1 cache on EPYC 7742. This can be explained from the fact that the distance
+and index matrix fit on cache. V100 has 6 MiB L2 cache and EPYC 7742 has 4 MiB
+L1 cache.
 
 \begin{figure}
     \centering
@@ -684,8 +690,15 @@ Figures \ref{fig:roofline-lookup-v100} and \ref{fig:roofline-lookup-eypc}
 
 \section{Conclusion \& Future Work}\label{sec:conclusion}
 
-Python interface
-AMD GPUs and A64FX
+In this paper, we designed and developed kEDM, a performance portable
+implementation of EDM based on the Kokkos performance portability framework.
+The new implementation is single-source and runs on both CPUs and GPUs.
+Several inefficiencies have been removed from mpEDM, resulting to a
+$5.49\times$ speedup in convergent cross mapping computation using real-world
+datasets.
+
+In the future, we will implement a Python interface. We will also evaluate on
+other platforms such as AMD GPUs and Fujitsu A64FX ARM processors.
 
 \begin{acks}
 This work was supported by JSPS KAKENHI Grant Number JP20K19808 (KT) and an
