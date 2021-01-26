@@ -25,13 +25,12 @@
 % Listing
 \lstset{%
   language={C++},
-  basicstyle={\small\ttfamily},%
+  basicstyle={\ttfamily},%
   backgroundcolor=\color{color-bg},%
-  identifierstyle={\small\ttfamily},%
-  commentstyle={\small\itshape\color{color-comment}},%
-  keywordstyle={\small\bfseries\color{color-ident}},%
-  % ndkeywordstyle={\small\ttfamily},%
-  stringstyle={\small\ttfamily\color{color-string}},%
+  identifierstyle={\ttfamily},%
+  commentstyle={\itshape\color{color-comment}},%
+  keywordstyle={\bfseries\color{color-ident}},%
+  stringstyle={\ttfamily\color{color-string}},%
   frame={trbl},%
   frameround={tttt},%
   breaklines=true,%
@@ -54,7 +53,8 @@
 \acmConference[PEARC '21]{PEARC '21: Practice and Experience in Advanced
 Research Computing}{July 18--22, 2021}{Virtual Conference}
 
-\title{kEDM: A Performance-portable Implementation of Empirical Dynamical Modeling}
+\title{kEDM: A Performance-portable Implementation of Empirical Dynamic
+Modeling using Kokkos}
 
 \author{Keichi Takahashi}
 \email{keichi@is.naist.jp}
@@ -87,20 +87,21 @@ Research Computing}{July 18--22, 2021}{Virtual Conference}
 }
 
 \begin{abstract}
-Empirical Dynamic Modeling (EDM) is a state-of-the-art non-linear time
-series analysis framework. Despite its wide applicability, EDM is
-computationally expensive and thus the scale of the datasets that can be
-applied to was limited. To overcome this obstacle, researchers have attempted
-to accelerate EDM from both algorithmic and implementational aspects. In our
-previous work, we have developed mpEDM, a massively parallel implementation of
-EDM targeting HPC systems. However, mpEDM maintains different backends for
-different architectures. This becomes a burden to port to new hardware in the
-current diversifying landscape of HPC systems. In this paper, we design and
-develop kEDM, a performance portable implementation of EDM based on the Kokkos
-performance portability framework. The new implementation is single-source and
-runs on both CPUs and GPUs. Several inefficiencies have been removed from
-mpEDM, resulting to a $5.49\times$ speedup in convergent cross mapping
-computation using real-world datasets.
+    Empirical Dynamic Modeling (EDM) is a state-of-the-art non-linear time
+    series analysis framework. Despite its wide applicability, EDM was not
+    scalable to large datasets due to its expensive computational cost. To
+    overcome this obstacle, researchers have attempted to accelerate EDM from
+    both algorithmic and implementational aspects. In our previous work, we
+    have developed mpEDM, a massively parallel implementation of EDM targeting
+    HPC systems. However, mpEDM maintains different backends for different
+    architectures. This design becomes a burden to port to new hardware in the
+    current diversifying landscape of HPC systems. In this paper, we design
+    and develop kEDM, a performance portable implementation of EDM based on
+    the Kokkos performance portability framework. kEDM runs on both CPUs and
+    GPUs while based on a single code base. Furthermore, individual kernels
+    have been specifically optimized for EDM computation. Benchmarks using
+    real-world datasets indicate up to $5.49\times$ speedup compared to mpEDM
+    in convergent cross mapping computation.
 \end{abstract}
 
 \keywords{Empirical Dynamical Modeling, Performance Portability,
@@ -132,20 +133,19 @@ High-Performance Computing}
 \begin{figure*}
     \centering
     \includegraphics[width=.95\linewidth]{figs/xmap_overview}
-    \caption{Overview of Convergent Cross Mapping}%
-    \label{fig:edm}
+    \caption{Overview of Convergent Cross Mapping (CCM)}\label{fig:edm}
 \end{figure*}
 
 Empirical Dynamic Modeling (EDM)~\cite{Chang2017} is a state-of-the-art
 non-linear time series analysis framework used for various tasks such as
 assessing the non-linearity of a system, making short-term forecasts, and
 identifying the existence and strength of causal relationships between
-variables. Despite its wide applicability, the scale of the datasets that can
-be applied to was limited because EDM is computationally expensive To overcome
-this obstacle, researchers have attempted to accelerate EDM  from both
-algorithmic and implementational aspects~\cite{Pu2019,Ma2014}.
+variables. Despite its wide applicability, EDM was not scalable to large
+datasets due to its expensive computational cost. To overcome this challenge,
+researchers have attempted to accelerate EDM from both algorithmic and
+implementational aspects~\cite{Pu2019,Ma2014}.
 
-We approach this challenge by taking advantage of modern HPC systems equipped
+We tackle this challenge by taking advantage of modern HPC systems equipped
 with multi-core CPUs and GPUs. We have been developing mpEDM, a massively
 parallel distributed implementation of EDM optimized for GPU-centric HPC
 systems. In our previous work~\cite{mpedm}, we have deployed mpEDM on the AI
@@ -164,11 +164,15 @@ CPUs and Radeon GPUs while the Aurora system at the Argonne National
 Laboratory will employ Intel Xeon CPUs and Xe GPUs. The Fugaku system at RIKEN
 uses Fujitsu A64FX Arm CPUs.
 
-Currently, mpEDM has two independent backends for x86\_64 CPUs and NVIDIA
-GPUs. This design becomes a burden when supporting a diverse set of hardware
-platforms because a new backend needs to be developed and maintained for
-every platform. Meanwhile, various performance portability
-frameworks~\cite{Deakin2019, Deakin2020} have been proposed to develop
+The current design of HPC applications has failed to keep up with this trend
+of rapidly diversifying HPC systems. Computational kernels of
+applications are developed with the native programming model for the
+respective hardware (e.g. CUDA on NVIDIA GPUs). mpEDM is no exception and
+maintains two completely independent backends for x86\_64 CPUs and NVIDIA
+GPUs. However, this design becomes a burden when supporting a diverse set of
+hardware platforms because a new backend needs to be developed and maintained
+for every platform. Based on this background, various performance portability
+frameworks~\cite{Deakin2019, Deakin2020} have been emerged to develop
 performance-portable applications from singe code base.
 
 In this paper, we use the Kokkos~\cite{Edwards2014} framework and develop
@@ -194,7 +198,7 @@ Empirical Dynamic Modeling (EDM)~\cite{Chang2017} is a non-linear time
 series analysis framework based on the Takens' embedding
 theorem~\cite{Deyle2011}. Takens' theorem states that given a time-series
 observation of a deterministic dynamical system, one can reconstruct the
-underlying attractor manifold of the dynamical system using time-delayed
+latent attractor manifold of the dynamical system using time-delayed
 embeddings of the observation. While the reconstructed manifold might not
 preserve the global structure of the original manifold, it preserves the local
 topological features (\textit{i.e.} a diffeomorphism).
@@ -202,7 +206,7 @@ topological features (\textit{i.e.} a diffeomorphism).
 Convergent Cross Mapping (CCM)~\cite{Sugihara2012,Natsukawa2017,VanBerkel2020}
 is one of the EDM methods that identifies and quantifies the causal
 relationship between two time series variables. Figure~\ref{fig:edm} shows the
-overview of CCM\@. Give two time series $X(t)$ and $Y(t)$, following four
+overview of CCM\@. Given two time series $X(t)$ and $Y(t)$, following four
 steps are performed:
 
 \begin{enumerate}
@@ -211,12 +215,14 @@ steps are performed:
         $x$ denotes the embedding of $X$ where $x(t)=(X(t), X(t-\tau),
         \dots, X(t-(E-1) \tau))$. $\tau$ is the time lag. $E$ is
         empirically determined and usually $E<20$ in real-world datasets.
-    \item \textit{k-Nearest Neighbor search}: For each point $x(t)$ in
-        embedding $x$, $E+1$ nearest neighbors of $x(t)$ in the state space
-        are searched. We refer to the nearest neighbors as $x(t_1)$, $x(t_2)$,
-        \dots, $x(t_{E+1})$ and the Euclidean distance between $x(t)$ and
-        $x(t_i)$ as $d(t, t_i) =\lVert x(t) - x(t_i) \rVert$.
-    \item \textit{Prediction}: The prediction $\hat{y}(t)$ for a $y(t)$ is a
+    \item \textit{k-Nearest Neighbor search}: For each point $x(t)$,
+         $E+1$ nearest neighbors of $x(t)$ in the state space
+        are searched. These neighbors form an $E$ dimensional simplex that
+        encloses $x(t)$ in the state space. We refer to the nearest neighbors
+        as $x(t_1)$, $x(t_2)$, \dots, $x(t_{E+1})$ and the Euclidean distance
+        between $x(t)$ and $x(t_i)$ as $d(t, t_i) =\lVert x(t) - x(t_i)
+        \rVert$.
+    \item \textit{Lookup}: The prediction $\hat{y}(t)$ for a $y(t)$ is a
         linear combination of points $y(t_1), y(t_2), \dots, y(t_{E+1})$.
         Specifically,
         \begin{equation*}
@@ -233,12 +239,14 @@ steps are performed:
         If $\rho$ is high, we conclude that $Y$ ``CCM-causes'' $X$.
 \end{enumerate}
 
-These steps are repeated for all pair of time series when performing
-pairwise CCM between multiple time series. We showed in our previous
-work~\cite{mpedm} that one can precompute the nearest neighbors for every
-point in $x$ (All $k$-NN search) and then use the nearest neighbors table to
-make predictions for all target time series. This reduces the number of $k$-NN
-search and provides significant speedup~\cite{mpedm}.
+These steps are repeated for all pair of time series when performing pairwise
+CCM between multiple time series. Out of these steps, $k$-nearest neighbor
+search and lookup consume significant runtime and need to optimized. We showed
+in our previous work~\cite{mpedm} that one can precompute the nearest
+neighbors for every point in $x$ (All $k$-NN search) and store them as lookup
+tables of distances and indices. These tables can then be used to make
+predictions for all target time series. This approach reduces the number of
+$k$-NN search and provides significant speedup.
 
 \subsection{Challenges in mpEDM}\label{sec:challenges}
 
@@ -393,7 +401,7 @@ distances between all embedded library points in the state space and obtain a
 pairwise distance matrix. Subsequently, each row of the obtained distance
 matrix is partially sorted to find the distances and indices of the points to.
 
-\subsubsection{Pairwise distance kernel}
+\subsubsection{Pairwise distances}
 As discussed in Section~\ref{sec:challenges}, performing the time-delayed
 embedding into state space and then calculating the pairwise distances is
 inefficient since it increases memory access. Instead, we perform the time
@@ -432,7 +440,7 @@ memory to speed up memory access.
     \label{alg:distances}
 \end{algorithm}
 
-\subsubsection{Top-$k$ kernel}
+\subsubsection{Top-$k$ search}
 
 The top-$k$ kernel is challenging to implement in a performance-portable manner
 because state-of-the-art top-$k$ algorithms~\cite{Johnson2019,Shanbhag2018}
@@ -524,6 +532,10 @@ computing (co-)variance proposed in~\cite{Schubert2018}.
 
 \section{Evaluation}\label{sec:evaluation}
 
+In this section we compare kEDM with mpEDM using micro benchmarks and
+real-world datasets. Furthermore, we conduct a roofline analysis of kEDM to
+assess the efficiency of our implementation.
+
 \subsection{Evaluation Environment}
 
 % use table?
@@ -602,12 +614,12 @@ cache hit ratio.
 
 We used several real-world datasets with diverse number and length of time
 series that reflect the variety of use cases.
-% Need short description of the datasets from Gerald
-Table~\ref{tbl:real-world} shows the runtime for processing each dataset The
-results indicate that kEDM outperforms mpEDM in most cases. In particular,
-kEDM shows significantly better (up to 5.5$\times$) performance than mpEDM on
-an Ika\@. This is because kEDM performs the lookups on the GPU instead of the
-CPU\@.
+% Need short description of the datasets and acknowledge their authors
+Table~\ref{tbl:real-world} shows the runtime for performing a pairwise CCM for
+each dataset. The results demonstrate that kEDM outperforms mpEDM in most
+cases. In particular, kEDM shows significantly better (up to 5.5$\times$)
+performance than mpEDM on an Ika\@. This is because kEDM performs the lookups
+on the GPU instead of the CPU\@.
 
 \begin{table*}
 \centering
@@ -650,11 +662,11 @@ pairwise distance kernel increased with the embedding dimension since the
 reuse of the time series improves. On V100, the kernel was bounded by HBM
 bandwidth when $E=1$. However, the kernel was not able to reach the rooflines
 as $E$ increases. We found using NVIDIA Nsight profiler that the load store
-units were the bottleneck because of too many memory transactions. A common
-technique to reduce memory transaction is to use vectorize loads/stores. In
-this, it is not possible because the memory alignment depends on user-supplied
-parameters $E$ and $\tau$. On EPYC 7742, the kernel is clearly hitting the L3
-cache roofline.
+units were saturated because of excessive many memory transactions. A common
+technique to reduce the number of memory transactions is to use vectorized
+loads and stores; however, it is not applicable here because the memory
+alignment depends on the user-supplied parameters $E$ and $\tau$. On EPYC 7742,
+the kernel is clearly hitting the L3 cache roofline.
 
 \begin{figure}
     \centering
@@ -671,11 +683,12 @@ cache roofline.
 \end{figure}
 
 Figures \ref{fig:roofline-lookup-v100} and \ref{fig:roofline-lookup-eypc} show
-the rooflines for the lookup kernel on V100 and EPYC 7742, respectively.
-These plots indicate that the lookup kernel is bounded by L2 cache on V100 and
-L1 cache on EPYC 7742. This can be explained from the fact that the distance
-and index matrix fit on cache. V100 has 6 MiB L2 cache and EPYC 7742 has 4 MiB
-L1 cache.
+the rooflines for the lookup kernel on V100 and EPYC 7742, respectively. These
+plots indicate that the lookup kernel is bounded by the L2 cache on V100 and
+the L1 cache on EPYC 7742. This is explained from the fact that the distance
+and index matrix fit on the respective caches. For example, the footprint of
+the distance and index matrix is 1.6 MB if $E=20$. This fits on EPYC 7742's L1
+cache (4 MiB) and V100's L2 cache (6 MiB).
 
 \begin{figure}
     \centering
@@ -693,22 +706,21 @@ L1 cache.
 
 \section{Conclusion \& Future Work}\label{sec:conclusion}
 
-In this paper, we designed and developed kEDM, a performance portable
-implementation of EDM based on the Kokkos performance portability framework.
-The new implementation is single-source and runs on both CPUs and GPUs.
-Several inefficiencies have been removed from mpEDM, resulting to a
-$5.49\times$ speedup in convergent cross mapping computation using real-world
-datasets.
+We designed and developed kEDM, a performance portable implementation of EDM
+based on the Kokkos performance portability framework. The new implementation
+is single-source and runs on both CPUs and GPUs. Furthermore, several
+inefficiencies have been removed from mpEDM and kernels have been custom
+tailored. Benchmarks using real-world datasets indicate up to $5.49\times$
+speedup in convergent cross mapping computation.
 
-In the future, we will implement a Python interface. We will also evaluate on
-other platforms such as AMD GPUs and Fujitsu A64FX ARM processors.
+In the future, we will implement a Python binding to facilitate adoption by
+users. We will also evaluate on other hardware platforms such as AMD GPUs and
+Fujitsu A64FX ARM processors.
 
 \begin{acks}
 This work was supported by JSPS KAKENHI Grant Number JP20K19808 (KT) and an
 Innovation grant by the Kavli Institute for Brain and Mind (GMP).
 \end{acks}
-
-\clearpage
 
 % check consistency (especially month)
 \bibliographystyle{IEEEtran}
