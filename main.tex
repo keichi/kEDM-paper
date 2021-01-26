@@ -87,7 +87,7 @@ Research Computing}{July 18--22, 2021}{Virtual Conference}
 }
 
 \begin{abstract}
-Empirical Dynamical Modeling (EDM) is a state-of-the-art non-linear time
+Empirical Dynamic Modeling (EDM) is a state-of-the-art non-linear time
 series analysis framework. Despite its wide applicability, EDM is
 computationally expensive and thus the scale of the datasets that can be
 applied to was limited. To overcome this obstacle, researchers have attempted
@@ -131,53 +131,52 @@ High-Performance Computing}
 
 \begin{figure*}
     \centering
-    \includegraphics[width=1.0\linewidth]{figs/xmap_overview}
+    \includegraphics[width=.95\linewidth]{figs/xmap_overview}
     \caption{Overview of Convergent Cross Mapping}%
     \label{fig:edm}
 \end{figure*}
 
-Empirical Dynamical Modeling (EDM)~\cite{Chang2017} is a state-of-the-art
+Empirical Dynamic Modeling (EDM)~\cite{Chang2017} is a state-of-the-art
 non-linear time series analysis framework used for various tasks such as
 assessing the non-linearity of a system, making short-term forecasts, and
 identifying the existence and strength of causal relationships between
-variables. Despite its wide applicability, EDM is computationally expensive
-and thus the scale of the datasets that can be applied to was limited. To
-overcome this obstacle, researchers have attempted to accelerate EDM  from
-both algorithmic and implementational aspects~\cite{Pu2019,Ma2014}.
+variables. Despite its wide applicability, the scale of the datasets that can
+be applied to was limited because EDM is computationally expensive To overcome
+this obstacle, researchers have attempted to accelerate EDM  from both
+algorithmic and implementational aspects~\cite{Pu2019,Ma2014}.
 
-Our approach for accelerating EDM is to take advantage of modern HPC systems
-equipped with multi-core CPUs and GPUs. We have been developing mpEDM, a
+We approach this challenge by taking advantage of modern HPC systems equipped
+with multi-core CPUs and GPUs. We have been developing mpEDM, a massively
 parallel distributed implementation of EDM optimized for GPU-centric HPC
-systems. In our previous work~\cite{mpedm}, we have executed mpEDM on
-the AI Bridging Cloud Infrastructure (ABCI)\footnote{\url{https://abci.ai/}}
-to obtain an all-to-all causal relationship map of all $10^5$ neurons in a
-larval zebrafish brain. To this date, this is the first causal analysis of a
-whole vertebrate brain at single neuron resolution.
+systems. In our previous work~\cite{mpedm}, we have deployed mpEDM on the AI
+Bridging Cloud Infrastructure (ABCI)\footnote{\url{https://abci.ai/}} to
+obtain an all-to-all causal relationship map of all $10^5$ neurons in an
+entire larval zebrafish brain. To this date, this is the first causal analysis
+of a whole vertebrate brain at single neuron resolution.
 
-Although mpEDM has successfully demonstrated the benefit of using HPC systems
-to achieve EDM computation at an unprecedented scale, there are still
-challenges remained. The primary challenge is \textit{performance portability}.
-Recent HPC landscape has seen significant increase in diversity of processors
-and accelerators. This is reflected in the design of upcoming exascale HPC
-systems: the Frontier system at the Oak Ridge National Laboratory will use AMD
-EPYC CPUs and Radeon GPUs while the Aurora system at the Argonne National
+Although mpEDM has successfully enabled EDM computation at an unprecedented
+scale, there are still challenges remained. The primary challenge is
+\textit{performance portability} across diverse hardware platforms. Recent HPC
+landscape has seen significant increase in diversity of processors and
+accelerators. This is reflected in the design of upcoming exascale HPC systems:
+the Frontier system at the Oak Ridge National Laboratory will use AMD EPYC
+CPUs and Radeon GPUs while the Aurora system at the Argonne National
 Laboratory will employ Intel Xeon CPUs and Xe GPUs. The Fugaku system at RIKEN
 uses Fujitsu A64FX Arm CPUs.
 
-Currently, mpEDM has two backends for x86\_64 CPUs and NVIDIA GPUs
-independently developed and maintained. This design becomes a burden when
-targeting a new hardware architecture requires development effort and
-increases maintenance cost because a new backend needs be implemented.
-Meanwhile, various performance portability frameworks~\cite{Deakin2019,
-Deakin2020} have been proposed to develop performance-portable applications
-from singe-source code base.
+Currently, mpEDM has two independent backends for x86\_64 CPUs and NVIDIA
+GPUs. This design becomes a burden when supporting a diverse set of hardware
+platforms because a new backend needs to be developed and maintained for
+every platform. Meanwhile, various performance portability
+frameworks~\cite{Deakin2019, Deakin2020} have been proposed to develop
+performance-portable applications from singe code base.
 
 In this paper, we use the Kokkos~\cite{Edwards2014} framework and develop
 \textit{kEDM}, a performance-portable implementation of EDM\@ that runs on
-both CPUs and GPUs. The new implementation is single-source design which
+both CPUs and GPUs. The new implementation is single-source design and
 facilitates the future development and porting to new hardware. Furthermore,
 we identify and take advantage of optimization opportunities in mpEDM and
-achieve 3--4$\times$ higher performance on NVIDIA V100 GPUs.
+achieve up to 5.5$\times$ higher performance on NVIDIA V100 GPUs.
 
 The rest of this paper is organized as follows. Section~\ref{sec:background}
 first introduces EDM briefly and then discusses the challenges in mpEDM\@.
@@ -191,14 +190,14 @@ Section~\ref{sec:conclusion} concludes this paper and discusses future work.
 
 \subsection{Empirical Dynamical Modeling (EDM)}\label{sec:edm}
 
-Empirical Dynamical Modeling (EDM) is a non-linear time series analysis
-framework based on the Takens' embedding theorem~\cite{Deyle2011}. Takens'
-theorem states that given a time-series observation of a deterministic
-dynamical system, one can reconstruct the underlying attractor manifold of the
-dynamical system using time-delayed embeddings of the observation. While the
-reconstructed manifold might not preserve the global structure of the original
-manifold, it preserves the local topological features (\textit{i.e.} a
-diffeomorphism).
+Empirical Dynamic Modeling (EDM)~\cite{Chang2017} is a non-linear time
+series analysis framework based on the Takens' embedding
+theorem~\cite{Deyle2011}. Takens' theorem states that given a time-series
+observation of a deterministic dynamical system, one can reconstruct the
+underlying attractor manifold of the dynamical system using time-delayed
+embeddings of the observation. While the reconstructed manifold might not
+preserve the global structure of the original manifold, it preserves the local
+topological features (\textit{i.e.} a diffeomorphism).
 
 Convergent Cross Mapping (CCM)~\cite{Sugihara2012,Natsukawa2017,VanBerkel2020}
 is one of the EDM methods that identifies and quantifies the causal
@@ -243,19 +242,19 @@ search and provides significant speedup~\cite{mpedm}.
 
 \subsection{Challenges in mpEDM}\label{sec:challenges}
 
-mpEDM\footnote{\url{https://github.com/keichi/mpEDM}}
-This subsection discusses the two major challenges in mpEDM: performance
-portability and flexibility.
+This subsection discusses the two major challenges in
+mpEDM\footnote{\url{https://github.com/keichi/mpEDM}}, our previous
+parallel implementation of EDM\@.
 
-\subsubsection{Performance portability}\label{sec:portability}
+\subsubsection{Performance portability across diverse hardware}\label{sec:portability}
 
 The GPU backend of mpEDM was based on ArrayFire~\cite{Malcolm2012}, a general
 purpose library for GPU computing. We chose ArrayFire primarily for its
 productivity and portability. ArrayFire provides CUDA and OpenCL backends to
 run on OpenCL devices. Although it also provides a CPU backend, most of the
 functions provided by the CPU backend are neither multi-threaded nor
-vectorized. For this reason, we implemented our implementation for CPU\@ using
-OpenMP\@.
+vectorized. For this reason, we implemented our own implementation for CPUs
+using OpenMP\@.
 
 As a result, mpEDM had a ArrayFire-based GPU implementation and a OpenMP-based
 CPU implementation of EDM, which doubles the maintenance cost. Considering the
@@ -263,7 +262,7 @@ diversifying target hardware, a unified implementation that achieves
 consistent and reasonable performance across a diverse set of hardware is
 required.
 
-\subsubsection{Flexibility}\label{sec:flexibility}
+\subsubsection{Kernels optimized for EDM}\label{sec:flexibility}
 
 Since mpEDM was relying on ArrayFire's k-nearest neighbor search function
 (\texttt{nearestNeighbour()}), we were unable to modify or tune the k-NN
@@ -282,12 +281,11 @@ CUB\footnote{\url{https://nvlabs.github.io/cub/}} library to implement partial
 sort. CUB is a highly optimized library and being used by other libraries such
 as Thrust\footnote{\url{https://github.com/NVIDIA/thrust}}. ArrayFire's
 \texttt{topk()} function divides the input array into equal sized sub-array
-and then calls CUB's \texttt{BlockRadixSort()} function to sort each
-sub-array. It then extracts the top-$k$ elements from each sub-array and
-concatenates them into a new array. This is recursively repeated until the
-global top-$k$ elements are found. Even though this implementation is
-well-optimized, it may not be optimal for EDM since the targeted $k$ is
-relatively small ($\leq 20$).
+and then calls CUB's parallel radix sort function to sort each sub-array. It
+then extracts the top-$k$ elements from each sub-array and concatenates them
+into a new array. This is recursively repeated until the global top-$k$
+elements are found. Even though this implementation is well-optimized, it may
+not be optimal for EDM since the targeted $k$ is relatively small ($\leq 20$).
 
 Finally, we were unable to implement efficient lookups on GPU using ArrayFire.
 ArrayFire provides a construct for embarrassingly parallel computation called
@@ -299,13 +297,18 @@ arrays.
 
 \section{kEDM}\label{sec:proposal}
 
+In this section, we first describe the overall design of kEDM followed by a
+brief summary of the Kokkos performance portability framework. We then present
+the design and implementation of our all $k$-nearest neighbor search and
+lookup kernels.
+
 \subsection{Overall Design}
 
 kEDM\footnote{\url{https://github.com/keichi/kEDM}} is our
-performance-portable implementation of EDM based on Kokkos. To ensure the
-correctness of the implementation, the output is validated against the output
-from mpEDM as well as the reference implementation pyEDM using automated unit
-tests.
+performance-portable implementation of EDM based on the Kokkos performance
+portability framework. To ensure the correctness of the implementation, the
+output is validated against the output from mpEDM as well as the reference
+implementation pyEDM using automated unit tests.
 
 Prior to implementing kEDM, we have examined a number of popular performance
 portability frameworks. These include OpenMP, OpenACC, OpenCL and SYCL\@. We
@@ -382,9 +385,9 @@ KOKKOS_LAMBDA(const member_type &member) {
 });
 \end{lstlisting}
 
-\subsection{All k-Nearest Neighbor Search}
+\subsection{All $k$-Nearest Neighbor Search}
 
-We implement the All k-NN search using an exhaustive approach similar
+We implement the All $k$-NN search using an exhaustive approach similar
 to~\cite{Garcia2008,Garcia2010}. That is, we first calculate the pairwise
 distances between all embedded library points in the state space and obtain a
 pairwise distance matrix. Subsequently, each row of the obtained distance
@@ -404,12 +407,11 @@ Since the inner-most $k$-loop is short ($E \leq 20$) in our use case,
 vectorizing it is not profitable. We therefore use \textit{SIMD types}
 \footnote{\url{https://github.com/Kokkos/simd-math}} to vectorize the
 $j$-loop. SIMD types are short vector with overloaded operators that map to
-intrinsic functions. SIMD types are mapped to scalars on GPUs and do not cause
-any overhead.
-Note that the library time series is reused if $E > 1$ and we can expect
-more reuse with larger $E$. In addition, we explicitly cache $\mathrm{library}
-(k \tau + i)$ (where $k=1 \dots E$) on team-local scratch memory to speed up
-memory access.
+intrinsic functions. SIMD types are mapped to scalars on GPUs and do not
+impose any overhead. Note that the library time series is reused if $E > 1$
+and we can expect more reuse with larger $E$. In addition, we explicitly cache
+$\mathrm{library} (k \tau + i)$ (where $k=1 \dots E$) on team-local scratch
+memory to speed up memory access.
 
 \begin{algorithm}
     \SetAlgoLined
@@ -433,9 +435,10 @@ memory access.
 \subsubsection{Top-$k$ kernel}
 
 The top-$k$ kernel is challenging to implement in a performance-portable manner
-because state-of-the-art top-$k$ algorithms~\cite{Johnson2019,Shanbhag2018} are
-optimized for specific hardware. For this reason, we designed and implemented a
-top-$k$ search algorithm that works on both CPU and GPU efficiently.
+because state-of-the-art top-$k$ algorithms~\cite{Johnson2019,Shanbhag2018}
+are usually optimized for specific hardware. For this reason, we designed and
+implemented a top-$k$ search algorithm that works on both CPU and GPU
+efficiently.
 
 Algorithm~\ref{alg:partial-sort} shows the algorithm. In our algorithm, each
 thread team finds the top-$k$ elements from one row of the distance matrix a
@@ -490,14 +493,14 @@ parallelized using \texttt{TeamPolicy}. Each team performs prediction of one
 target time series. The $j$-loop is parallelized using \texttt{TeamThreadRange}
 and makes predictions of each time point within a time series (line 5). The
 inner most serial $k$-loop is unrolled to exploit ILP\@. Since Kokkos currently
-does not have a portable way to request loop unrolling, we use the
-\texttt{\#pragma unroll} directive here. The loop body requires indirect access
-to the target time series using the indices table. To speed up random access, we
-cache the target time series in team-private scratch memory.
+provide a feature to indicate loop unrolling, we use the \texttt{\#pragma
+unroll} directive here. The loop body requires indirect access to the target
+time series using the indices table. To speed up random access, we cache the
+target time series in team-private scratch memory.
 
 In case the raw predictions are not needed and only the assessment of predictive
 skill is needed, kEDM does not write out the predicted time series to global
-memory. Instead, Pearson’s correlation is computed on-the-fly. To Kokkos’ custom
+memory. Instead, Pearson’s correlation is computed on-the-fly. Kokkos’ custom
 reduction feature is used to implement parallel calculation of correlation
 coefficient. The algorithm is based on a numerically stable algorithm for
 computing (co-)variance proposed in~\cite{Schubert2018}.
@@ -557,8 +560,8 @@ small, the difference between linear time and logarithmic time is not visible.
 
 Figures~\ref{fig:breakdown-lookup-v100} and~\ref{fig:breakdown-lookup-epyc}
 show the runtime of the lookup on V100 and EPYC 7742, respectively. The runtime
-does not include cross correlation calculation. Note that we ran kEDM only on
-V100 since mpEDM does not have a lookup kernel for GPU as described earlier in
+excludes cross correlation calculation. Note that we ran kEDM only on
+V100 since mpEDM lacks a lookup kernel for GPU as described earlier in
 Section~\ref{sec:flexibility}. As we can see from the plots, kEDM on V100
 consistently outperforms EPYC 7742 by a factor of 3$\times$ to 4$\times$.
 Interestingly, kEDM slightly outperforms mpEDM on EPYC. One of the reasons could
@@ -618,7 +621,7 @@ Fish1\_Normo &  154    & 1,600  &      3s &     11s & 3.67$\times$ &      3s &  
 Fly80XY      &  82     & 10,608 &     11s &     50s & 4.55$\times$ &     22s &     30s & 1.36$\times$ \\
 Genes\_MEF   &  45,318 & 96     &    344s &    334s & 0.97$\times$ &     96s &    139s & 1.45$\times$ \\
 Subject6     &  92,538 & 3,780  &  5,391s & 29,579s & 5.49$\times$ & 12,145s & 11,571s & 0.95$\times$ \\
-Subject11    & 101,729 & 8,528  & 20,517s &       s &     $\times$ & 43,812s & 38,542s & 0.88$\times$ \\
+Subject11    & 101,729 & 8,528  & 20,517s & 85,217s & 4.15$\times$ & 43,812s & 38,542s & 0.88$\times$ \\
 F1           &  8,520  & 29,484 & 11,372s & 20,128s & 1.77$\times$ & 23,001s & 19,950s & 0.87$\times$ \\ \bottomrule
 \end{tabular}
 \end{table*}
