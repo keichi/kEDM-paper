@@ -215,12 +215,12 @@ steps are performed:
         $x$ denotes the embedding of $X$ where $x(t)=(X(t), X(t-\tau),
         \dots, X(t-(E-1) \tau))$. $\tau$ is the time lag. $E$ is
         empirically determined and usually $E<20$ in real-world datasets.
-    \item \textit{k-Nearest Neighbor search}: For each point $x(t)$,
-         $E+1$ nearest neighbors of $x(t)$ in the state space
-        are searched. These neighbors form an $E$ dimensional simplex that
-        encloses $x(t)$ in the state space. We refer to the nearest neighbors
-        as $x(t_1)$, $x(t_2)$, \dots, $x(t_{E+1})$ and the Euclidean distance
-        between $x(t)$ and $x(t_i)$ as $d(t, t_i) =\lVert x(t) - x(t_i)
+    \item \textit{k-Nearest Neighbor search}: For every point $x(t)$,
+         its $E+1$ nearest neighbors in the state space are searched. These
+         neighbors form an $E$ dimensional simplex that encloses $x(t)$ in the
+         state space. We refer to the nearest neighbors as $x(t_1)$, $x(t_2)$,
+         \dots, $x(t_{E+1})$ and the Euclidean distance between $x(t)$ and
+         $x(t_i)$ as $d(t, t_i) =\lVert x(t) - x(t_i)
         \rVert$.
     \item \textit{Lookup}: The prediction $\hat{y}(t)$ for a $y(t)$ is a
         linear combination of points $y(t_1), y(t_2), \dots, y(t_{E+1})$.
@@ -243,7 +243,7 @@ These steps are repeated for all pair of time series when performing pairwise
 CCM between multiple time series. Out of these steps, $k$-nearest neighbor
 search and lookup consume significant runtime and need to optimized. We showed
 in our previous work~\cite{mpedm} that one can precompute the nearest
-neighbors for every point in $x$ (All $k$-NN search) and store them as lookup
+neighbors for every point in $x$ (all $k$-NN search) and store them as lookup
 tables of distances and indices. These tables can then be used to make
 predictions for all target time series. This approach reduces the number of
 $k$-NN search and provides significant speedup.
@@ -310,13 +310,16 @@ brief summary of the Kokkos performance portability framework. We then present
 the design and implementation of our all $k$-nearest neighbor search and
 lookup kernels.
 
-\subsection{Overall Design}
+\subsection{Overview}
 
 kEDM\footnote{\url{https://github.com/keichi/kEDM}} is our
 performance-portable implementation of EDM based on the Kokkos performance
-portability framework. To ensure the correctness of the implementation, the
-output is validated against the output from mpEDM as well as the reference
-implementation pyEDM using automated unit tests.
+portability framework. We retain the high-level design of mpEDM, but
+reimplement the whole application using Kokkos and optimize bottleneck kernels
+(all $k$-nearest neighbor search and lookup). To ensure the correctness of the
+implementation, outputs from kEDM are validated against mpEDM as well as
+cppEDM\footnote{\url{https://github.com/SugiharaLab/cppEDM}}, a reference
+implementation of EDM, using automated unit tests.
 
 Prior to implementing kEDM, we have examined a number of popular performance
 portability frameworks. These include OpenMP, OpenACC, OpenCL and SYCL\@. We
@@ -327,7 +330,7 @@ multiple production applications~\cite{Sprague2020,Holmen2017,Demeshko2019}.
 SYCL and OpenMP are attractive choices as they have grown rapidly over the
 last few years in terms of hardware coverage and delivered performance, but we
 still consider them immature compared to Kokkos at the point of writing this
-paper.
+paper. Therefore, we choose Kokkos to implement kEDM\@.
 
 \subsection{Kokkos}
 
@@ -355,10 +358,11 @@ bound to an execution space, an abstraction of where the code runs. The latest
 release of Kokkos supports Serial, OpenMP, OpenMP Target, CUDA, HIP, Pthread,
 HPX and SYCL\@.
 
-\textit{View} is the fundamental data type in Kokkos and represents a
-multidimensional array. Views are explicitly allocated by the user and
-deallocated automatically by Kokkos using reference counting. Each view is
-associated to a memory space, an abstraction of where the data resides.
+\textit{Views} are fundamental data types in Kokkos that represent
+homogeneous multidimensional arrays. Views are explicitly allocated by the
+user and deallocated automatically by Kokkos using reference counting. Each
+view is associated to a memory space, an abstraction of where the data
+resides.
 
 Listing~\ref{lst:basic} shows a vector addition  kernel implemented in Kokkos.
 In this example, a parallel-for loop is launched that iterates over the 1D
@@ -395,7 +399,7 @@ KOKKOS_LAMBDA(const member_type &member) {
 
 \subsection{All $k$-Nearest Neighbor Search}
 
-We implement the All $k$-NN search using an exhaustive approach similar
+We implement the all $k$-NN search using an exhaustive approach similar
 to~\cite{Garcia2008,Garcia2010}. That is, we first calculate the pairwise
 distances between all embedded library points in the state space and obtain a
 pairwise distance matrix. Subsequently, each row of the obtained distance
@@ -506,12 +510,12 @@ unroll} directive here. The loop body requires indirect access to the target
 time series using the indices table. To speed up random access, we cache the
 target time series in team-private scratch memory.
 
-In case the raw predictions are not needed and only the assessment of predictive
-skill is needed, kEDM does not write out the predicted time series to global
-memory. Instead, Pearson’s correlation is computed on-the-fly. Kokkos’ custom
-reduction feature is used to implement parallel calculation of correlation
-coefficient. The algorithm is based on a numerically stable algorithm for
-computing (co-)variance proposed in~\cite{Schubert2018}.
+In case the raw predictions are not needed and only the assessment of
+predictive skill is needed, kEDM does not write out the predicted time series
+to global memory. Instead, Pearson’s correlation is computed on-the-fly.
+Kokkos’ custom reduction feature is used to implement parallel calculation of
+correlation coefficient. The algorithm is based on a numerically stable
+algorithm for computing (co-)variance proposed in~\cite{Schubert2018}.
 
 \begin{algorithm}
     \SetAlgoLined
@@ -554,7 +558,7 @@ We implemented micro benchmarks to measure the performance of the individual
 kernels we described in Section~\ref{sec:proposal} and compare them with
 mpEDM\@.
 
-Figure~\ref{fig:breakdown-knn-v100} shows the runtime of the All k-NN search
+Figure~\ref{fig:breakdown-knn-v100} shows the runtime of the all k-NN search
 of kEDM and mpEDM on NVIDIA V100. The result indicates that the pairwise
 distance calculation in kEDM is significantly faster than mpEDM (up to
 6.6$\times$). This is because the embedding is done during the distance
@@ -563,7 +567,7 @@ $E=1$, kEDM is 6.2$\times$ faster than mpEDM\@. However, kEDM's performance
 degrades as $E$ increases and slightly underperforms mpEDM when $E=20$.
 Another issue is warp divergence.
 
-Figure~\ref{fig:breakdown-knn-epyc} shows the runtime of the All k-NN search
+Figure~\ref{fig:breakdown-knn-epyc} shows the runtime of the all k-NN search
 on AMD EPYC 7742. It should be noted that the partial sort algorithm in mpEDM
 uses a max heap to store the elements. Since the $E$ we are interested is
 small, the difference between linear time and logarithmic time is not visible.
@@ -585,14 +589,14 @@ cache hit ratio.
 \begin{figure}
     \centering
     \includegraphics{figs/breakdown_knn_v100}
-    \caption{Breakdown of All k-NN search runtime on V100 ($L=10^4$)}%
+    \caption{Breakdown of all k-NN search runtime on V100 ($L=10^4$)}%
     \label{fig:breakdown-knn-v100}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics{figs/breakdown_knn_epyc}
-    \caption{Breakdown of All k-NN search runtime on EPYC 7742 ($L=10^4$)}%
+    \caption{Breakdown of all k-NN search runtime on EPYC 7742 ($L=10^4$)}%
     \label{fig:breakdown-knn-epyc}
 \end{figure}
 
