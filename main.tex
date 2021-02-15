@@ -68,6 +68,25 @@ Modeling using Kokkos}
   \country{Japan}
 }
 
+\author{Joseph Park}
+\email{josephpark@ieee.org}
+\affiliation{%
+  \institution{U.S. Department of the Interior}
+  \city{Homestead}
+  \state{Florida}
+  \country{USA}
+}
+
+\author{Ryousei Takano}
+\email{takano-ryousei@aist.go.jp}
+\author{Jason Haga}
+\email{jh.haga@aist.go.jp}
+\affiliation{%
+  \institution{National Institute of Advanced Industrial Science and Technology}
+  \city{Tsukuba}
+  \country{Japan}
+}
+
 \author{George Sugihara}
 \email{gsugihara@ucsd.edu}
 \affiliation{%
@@ -86,21 +105,20 @@ Modeling using Kokkos}
   \country{USA}
 }
 
+\renewcommand{\shortauthors}{K. Takahashi et al.}
+
 \begin{abstract}
-    Empirical Dynamic Modeling (EDM) is a state-of-the-art non-linear time
-    series analysis framework. Despite its wide applicability, EDM was not
+    Empirical Dynamic Modeling (EDM) is a state-of-the-art non-linear time-series analysis framework. Despite its wide applicability, EDM was not
     scalable to large datasets due to its expensive computational cost. To
-    overcome this obstacle, researchers have attempted to accelerate EDM from
-    both algorithmic and implementational aspects. In our previous work, we
-    have developed mpEDM, a massively parallel implementation of EDM targeting
-    HPC systems. However, mpEDM maintains different backends for different
-    architectures. This design becomes a burden to port to new hardware in the
-    current diversifying landscape of HPC systems. In this paper, we design
-    and develop kEDM, a performance portable implementation of EDM based on
-    the Kokkos performance portability framework. kEDM runs on both CPUs and
-    GPUs while based on a single code base. Furthermore, individual kernels
-    have been specifically optimized for EDM computation. Benchmarks using
-    real-world datasets indicate up to $5.49\times$ speedup compared to mpEDM
+    overcome this obstacle, researchers have attempted and succeeded in accelerating EDM from
+    both algorithmic and implementational aspects. In previous work, we
+     developed a massively parallel implementation of EDM targeting
+    HPC systems (mpEDM). However, mpEDM maintains different backends for different
+    architectures. This design becomes a burden in the
+    increasingly diversifying HPC systems, when porting to new hardware. In this paper, we design
+    and develop a performance-portable implementation of EDM based on
+    the Kokkos performance portability framework (kEDM), which runs on both CPUs and
+    GPUs while based on a single code base. Furthermore, we optimize individual kernels specifically for EDM computation, and use real-world datasets to demonstrate up to $5.49\times$ speedup compared to mpEDM
     in convergent cross mapping computation.
 \end{abstract}
 
@@ -137,7 +155,7 @@ High-Performance Computing}
 \end{figure*}
 
 Empirical Dynamic Modeling (EDM)~\cite{Chang2017} is a state-of-the-art
-non-linear time series analysis framework used for various tasks such as
+non-linear time-series analysis framework used for various tasks such as
 assessing the non-linearity of a system, making short-term forecasts, and
 identifying the existence and strength of causal relationships between
 variables. Despite its wide applicability, EDM was not scalable to large
@@ -146,49 +164,47 @@ researchers have attempted to accelerate EDM from both algorithmic and
 implementational aspects~\cite{Pu2019,Ma2014}.
 
 We tackle this challenge by taking advantage of modern HPC systems equipped
-with multi-core CPUs and GPUs. We have been developing mpEDM, a massively
+with multi-core CPUs and GPUs. We have been developing a massively
 parallel distributed implementation of EDM optimized for GPU-centric HPC
-systems. In our previous work~\cite{mpedm}, we have deployed mpEDM on the AI
+systems, which we refer to as mpEDM. In our previous work~\cite{mpedm}, we have deployed mpEDM on the AI
 Bridging Cloud Infrastructure (ABCI)\footnote{\url{https://abci.ai/}} to
 obtain an all-to-all causal relationship map of all $10^5$ neurons in an
-entire larval zebrafish brain. To this date, this is the first causal analysis
+entire larval zebrafish brain. To date, this is the first causal analysis
 of a whole vertebrate brain at single neuron resolution.
 
 Although mpEDM has successfully enabled EDM computation at an unprecedented
-scale, there are still challenges remained. The primary challenge is
+scale, challenges remain. The primary challenge is
 \textit{performance portability} across diverse hardware platforms. Recent HPC
-landscape has seen significant increase in diversity of processors and
-accelerators. This is reflected in the design of upcoming exascale HPC systems:
+landscape has seen significant increase in the diversity of processors and
+accelerators. This is reflected in the design of upcoming exascale HPC systems, for example, 
 the Frontier system at the Oak Ridge National Laboratory will use AMD EPYC
 CPUs and Radeon GPUs while the Aurora system at the Argonne National
-Laboratory will employ Intel Xeon CPUs and Xe GPUs. The Fugaku system at RIKEN
+Laboratory will employ Intel Xeon CPUs and Xe GPUs; additionally, the Fugaku system at RIKEN
 uses Fujitsu A64FX Arm CPUs.
 
 The current design of HPC applications has failed to keep up with this trend
-of rapidly diversifying HPC systems. Computational kernels of
-applications are developed with the native programming model for the
+of rapidly diversifying HPC systems. Computational application kernels are developed with the native programming model for the
 respective hardware (e.g. CUDA on NVIDIA GPUs). mpEDM is no exception and
 maintains two completely independent backends for x86\_64 CPUs and NVIDIA
 GPUs. However, this design becomes a burden when supporting a diverse set of
 hardware platforms because a new backend needs to be developed and maintained
-for every platform. Based on this background, various performance portability
+for every platform. Based on this trend, various performance portability
 frameworks~\cite{Deakin2019, Deakin2020} have been emerged to develop
-performance-portable applications from singe code base.
+performance-portable applications from single code base.
 
-In this paper, we use the Kokkos~\cite{Edwards2014} framework and develop
-\textit{kEDM}, a performance-portable implementation of EDM\@ that runs on
-both CPUs and GPUs. The new implementation is single-source design and
+In this paper, we use the Kokkos~\cite{Edwards2014} framework and develop a performance-portable implementation of EDM\@ that runs on
+both CPUs and GPUs, herein referred to as \textit{kEDM}. This new implementation is based on a single-source design and
 facilitates the future development and porting to new hardware. Furthermore,
 we identify and take advantage of optimization opportunities in mpEDM and
 achieve up to 5.5$\times$ higher performance on NVIDIA V100 GPUs.
 
-The rest of this paper is organized as follows. Section~\ref{sec:background}
-first introduces EDM briefly and then discusses the challenges in mpEDM\@.
+The rest of this paper is organized as follows: Section~\ref{sec:background}
+first introduces EDM briefly and discusses the challenges in mpEDM\@;
 Section~\ref{sec:proposal} presents kEDM, a novel performance-portable
-implementation of EDM based on the Kokkos performance portability framework.
+implementation of EDM based on the Kokkos performance portability framework;
 Section~\ref{sec:evaluation} compares kEDM and mpEDM using both synthetic and
-real-world datasets and assesses the efficiency of kEDM\@.
-Section~\ref{sec:conclusion} concludes this paper and discusses future work.
+real-world datasets and assesses the efficiency of kEDM\@; and finally
+Section~\ref{sec:conclusion} concludes the paper and discusses future work.
 
 \section{Background}\label{sec:background}
 
@@ -712,9 +728,8 @@ cache (4 MiB) and V100's L2 cache (6 MiB).
 
 We designed and developed kEDM, a performance portable implementation of EDM
 based on the Kokkos performance portability framework. The new implementation
-is single-source and runs on both CPUs and GPUs. Furthermore, several
-inefficiencies have been removed from mpEDM and kernels have been custom
-tailored. Benchmarks using real-world datasets indicate up to $5.49\times$
+is single-source and runs on both CPUs and GPUs. Furthermore, we removed several
+several inefficiencies from mpEDM and custom-tailored kernels. Benchmarks using real-world datasets indicate up to $5.49\times$
 speedup in convergent cross mapping computation.
 
 In the future, we will implement a Python binding to facilitate adoption by
