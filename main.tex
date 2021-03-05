@@ -200,8 +200,7 @@ achieve up to 5.5$\times$ higher performance on NVIDIA V100 GPUs.
 
 The rest of this paper is organized as follows: Section~\ref{sec:background}
 first introduces EDM briefly and discusses the challenges in mpEDM\@;
-Section~\ref{sec:proposal} presents kEDM, a novel performance-portable
-implementation of EDM based on the Kokkos performance portability framework;
+Section~\ref{sec:proposal} presents kEDM, a novel implementation of EDM based on the Kokkos performance portability framework;
 Section~\ref{sec:evaluation} compares kEDM and mpEDM using both synthetic and
 real-world datasets and assesses the efficiency of kEDM\@; and finally
 Section~\ref{sec:conclusion} concludes the paper and discusses future work.
@@ -246,7 +245,7 @@ steps are performed:
         \end{equation*}
         where
         \begin{equation*}
-            w_i = \exp\left\{ -\frac{d(t, t_i)}{\min{d(t, t_i)}}\right\}
+            w_i = \exp\left\{ -\frac{d(t, t_i)}{\min\limits_{1\leq i \leq E}{d(t, t_i)}}\right\}
         \end{equation*}
         The prediction $\hat{Y}(t)$ for $Y(t)$ is made by extracting the first
         component of $\hat{y}(t)$.
@@ -329,8 +328,7 @@ lookup kernels.
 \subsection{Overview}
 
 kEDM\footnote{\url{https://github.com/keichi/kEDM}} is our
-performance-portable implementation of EDM based on the Kokkos performance
-portability framework. We retain the high-level design of mpEDM, but
+performance-portable implementation of EDM based on the Kokkos framework. We retain the high-level design of mpEDM, but
 reimplement the whole application using Kokkos and optimize bottleneck kernels
 (all $k$-nearest neighbor search and lookup). To ensure the correctness of the
 implementation, outputs from kEDM are validated against mpEDM as well as
