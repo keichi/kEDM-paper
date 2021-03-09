@@ -124,8 +124,7 @@ Modeling using Kokkos}
     in convergent cross mapping computation.
 \end{abstract}
 
-\keywords{Empirical Dynamic Modeling, Performance Portability, Kokkos,
-High Performance Computing}
+\keywords{Empirical Dynamic Modeling, Performance Portability, Kokkos, GPU, High Performance Computing}
 
 % https://dl.acm.org/ccs
 \begin{CCSXML}
@@ -197,7 +196,7 @@ maintains two completely independent backends for x86\_64 CPUs and NVIDIA
 GPUs. However, this design becomes a burden when supporting a diverse set of
 hardware platforms because a new backend needs to be developed and maintained
 for every platform. Based on this trend, various performance portability
-frameworks~\cite{Deakin2019, Deakin2020} have been emerged to develop
+frameworks~\cite{Deakin2019, Deakin2020} have emerged to develop
 performance-portable applications from single codebase.
 
 In this paper, we use the Kokkos~\cite{Edwards2014} framework and develop a performance-portable implementation of EDM\@ that runs on
