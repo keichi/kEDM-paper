@@ -1,5 +1,5 @@
-\documentclass[sigconf]{acmart}
-% \documentclass{acmart}
+% \documentclass[sigconf]{acmart}
+\documentclass{acmart}
 
 \RequirePackage[l2tabu, orthodox]{nag}
 
@@ -8,6 +8,7 @@
 \usepackage{booktabs}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
+\usepackage[htt]{hyphenat}
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
 \usepackage{url}
@@ -119,11 +120,11 @@ Modeling using Kokkos}
     increasingly diversifying HPC systems, when porting to new hardware. In this paper, we design
     and develop a performance-portable implementation of EDM based on
     the Kokkos performance portability framework (kEDM), which runs on both CPUs and
-    GPUs while based on a single code base. Furthermore, we optimize individual kernels specifically for EDM computation, and use real-world datasets to demonstrate up to $5.5\times$ speedup compared to mpEDM
+    GPUs while based on a single codebase. Furthermore, we optimize individual kernels specifically for EDM computation, and use real-world datasets to demonstrate up to $5.5\times$ speedup compared to mpEDM
     in convergent cross mapping computation.
 \end{abstract}
 
-\keywords{Empirical Dynamic Modeling, Performance Portability,
+\keywords{Empirical Dynamic Modeling, Performance Portability, Kokkos,
 High Performance Computing}
 
 % https://dl.acm.org/ccs
@@ -139,11 +140,17 @@ High Performance Computing}
        <concept_desc>General and reference~Performance</concept_desc>
        <concept_significance>300</concept_significance>
        </concept>
+   <concept>
+       <concept_id>10010405.10010432.10010442</concept_id>
+       <concept_desc>Applied computing~Mathematics and statistics</concept_desc>
+       <concept_significance>300</concept_significance>
+       </concept>
  </ccs2012>
 \end{CCSXML}
 
 \ccsdesc[500]{Computing methodologies~Parallel computing methodologies}
 \ccsdesc[300]{General and reference~Performance}
+\ccsdesc[300]{Applied computing~Mathematics and statistics}
 
 \maketitle
 
@@ -167,8 +174,8 @@ implementational aspects~\cite{Pu2019,Ma2014}.
 We tackle this challenge by taking advantage of modern HPC systems equipped
 with multi-core CPUs and GPUs. We have been developing a massively
 parallel distributed implementation of EDM optimized for GPU-centric HPC
-systems, which we refer to as mpEDM. In our previous work~\cite{mpedm}, we have deployed mpEDM on the AI
-Bridging Cloud Infrastructure (ABCI)\footnote{\url{https://abci.ai/}} to
+systems, which we refer to as \textit{mpEDM}. In our previous work~\cite{mpedm}, we have deployed mpEDM on the AI
+Bridging Cloud Infrastructure (ABCI)\footnote{\url{https://abci.ai}} to
 obtain an all-to-all causal relationship map of all $10^5$ neurons in an
 entire larval zebrafish brain. To date, this is the first causal analysis
 of a whole vertebrate brain at single neuron resolution.
@@ -181,17 +188,17 @@ accelerators. This is reflected in the design of upcoming exascale HPC systems, 
 the Frontier system at the Oak Ridge National Laboratory will use AMD EPYC
 CPUs and Radeon GPUs while the Aurora system at the Argonne National
 Laboratory will employ Intel Xeon CPUs and Xe GPUs; additionally, the Fugaku system at RIKEN
-uses Fujitsu A64FX Arm CPUs.
+uses Fujitsu A64FX ARM CPUs.
 
 The current design of HPC applications has failed to keep up with this trend
 of rapidly diversifying HPC systems. Computational application kernels are developed with the native programming model for the
-respective hardware (\textit{e.g.} CUDA on NVIDIA GPUs). mpEDM is no exception and
+respective hardware (\textit{e}.\textit{g}., CUDA on NVIDIA GPUs). mpEDM is no exception and
 maintains two completely independent backends for x86\_64 CPUs and NVIDIA
 GPUs. However, this design becomes a burden when supporting a diverse set of
 hardware platforms because a new backend needs to be developed and maintained
 for every platform. Based on this trend, various performance portability
 frameworks~\cite{Deakin2019, Deakin2020} have been emerged to develop
-performance-portable applications from single code base.
+performance-portable applications from single codebase.
 
 In this paper, we use the Kokkos~\cite{Edwards2014} framework and develop a performance-portable implementation of EDM\@ that runs on
 both CPUs and GPUs, herein referred to as \textit{kEDM}. This new implementation is based on a single-source design and
@@ -216,29 +223,30 @@ observation of a deterministic dynamical system, one can reconstruct the
 latent attractor manifold of the dynamical system using time-delayed
 embeddings of the observation. While the reconstructed manifold might not
 preserve the global structure of the original manifold, it preserves the local
-topological features (\textit{i.e.} a diffeomorphism).
+topological features (\textit{i}.\textit{e}., a diffeomorphism).
 
 Convergent Cross Mapping (CCM)~\cite{Sugihara2012,Natsukawa2017,VanBerkel2020}
 is one of the widely used EDM methods that identifies and quantifies the causal
 relationship between two time series variables. Figure~\ref{fig:edm} illustrates the
-overview of CCM\@. Given two time series $X(t)$ and $Y(t)$, CCM consists of the following four
-steps:
+overview of CCM\@. To assess if a time series $Y(t)$ (hereinafter called \textit{target})
+causes another time seris $X(t)$ (hereinafter called \textit{library}), CCM performs
+the following four steps:
 
 \begin{enumerate}
-    \item \textit{Embedding}: Time series $X$ and $Y$ are embedded into
-        $E$ dimensional state space using their time lags. For example,
-        $x$ denotes the embedding of $X$ where $x(t)=(X(t), X(t-\tau),
+    \item \textit{Embedding}: Both time series $X$ and $Y$ are embedded into
+        $E$-dimensional state space using their time lags. For example, embedding
+        of $X$ is denoted by $x$, where $x(t)=(X(t), X(t-\tau),
         \dots, X(t-(E-1) \tau))$. Here, $\tau$ is the time lag and $E$ is 
         the embedding dimension, which is
         empirically determined and usually $E<20$ in real-world datasets.
-    \item \textit{k-Nearest Neighbor Search}: For every point $x(t)$,
+    \item \textit{k-Nearest Neighbor Search}: For every library point $x(t)$,
          its $E+1$ nearest neighbors in the state space are searched. These
-         neighbors form an $E$ dimensional simplex that encloses $x(t)$ in the
+         neighbors form an $E$-dimensional simplex that encloses $x(t)$ in the
          state space. We refer to these nearest neighbors as $x(t_1)$, $x(t_2)$,
          \dots, $x(t_{E+1})$ and the Euclidean distance between $x(t)$ and
          $x(t_i)$ as $d(t, t_i) =\lVert x(t) - x(t_i)
         \rVert$.
-    \item \textit{Lookup}: The prediction $\hat{y}(t)$ for a point $y(t)$ is a
+    \item \textit{Lookup}: The prediction $\hat{y}(t)$ for a target point $y(t)$ is a
         linear combination of its neighbors $y(t_1), y(t_2), \dots, y(t_{E+1})$.
         Specifically,
         \begin{equation*}
@@ -251,15 +259,16 @@ steps:
         The prediction $\hat{Y}(t)$ for $Y(t)$ is made by extracting the first
         component of $\hat{y}(t)$.
     \item \textit{Assessment of Prediction}: Pearson's correlation $\rho$
-        between $Y$ and $\hat{Y}$ is computed to assess the predictive skill.
+        between the target time series $Y$ and the predicted time series $\hat{Y}$
+        is computed to assess the predictive skill.
         If $\rho$ is high, we conclude that $Y$ ``CCM-causes'' $X$.
 \end{enumerate}
 
 These four steps are repeated for all pair of time series when performing pairwise
 CCM between multiple time series. Out of these steps, the $k$-nearest neighbor
 search and the lookup consume significant runtime and need to optimized. 
-The $k$-nearest neighbor search and lookup in the state space are fundamental to EDM and generally dominate the runtime in other EDM algorithms as well.
-We showed in our previous work~\cite{mpedm} that one can pre-compute the nearest
+The $k$-nearest neighbor search and lookup in the state space are fundamental operations in EDM and generally dominate the runtime in other EDM algorithms as well.
+We showed in our previous work~\cite{mpedm} that one can precompute the nearest
 neighbors for every point in $x$ (all $k$-NN search) and store them as a lookup
 table of distances and indices. This table can then be used to make
 predictions for all target time series. This approach reduces the number of
@@ -281,21 +290,20 @@ functions provided by the CPU backend are neither multi-threaded nor
 vectorized. We therefore developed our own implementation for CPUs
 using OpenMP\@.
 
-As a result, mpEDM had a ArrayFire-based GPU implementation and a OpenMP-based
-CPU implementation of EDM, which doubles the maintenance cost. Considering the
+As a result, mpEDM had an ArrayFire-based GPU implementation and an OpenMP-based
+CPU implementation of EDM, which double the maintenance cost. Considering the
 diversifying target hardware, a unified implementation that achieves
 consistent and reasonable performance across a diverse set of hardware is
 required.
 
 \subsubsection{Kernels tailored for EDM}\label{sec:flexibility}
 
-Since mpEDM was relying on ArrayFire's k-nearest neighbor search function
-(\texttt{nearestNeighbour()}), we were unable to modify or tune the k-NN
+Since mpEDM was relying on ArrayFire's k-nearest neighbor search function \texttt{nearestNeighbour()}, we were unable to modify or tune the k-NN
 search to suit our use case and missed opportunities for further optimization.
-ArrayFire's nearest neighbor function accepts an array of reference and query
+ArrayFire's nearest neighbor function accepts arrays of reference and query
 points, and returns arrays of closest reference points and their distances
-for each query point. This interface is simple and easy-to-use; however, when
-applying to EDM, the time-delayed embedding needs to be performed on CPU in
+for every query point. This interface is simple and easy-to-use; however, when
+applying to EDM, the time-delayed embedding needs to be performed on the CPU in
 advance and then passed on to ArrayFire. This hinders performance because it
 increases the amount of memories copies between the CPU and the
 GPU and memory reads from GPU memory.
@@ -311,7 +319,7 @@ and then calls CUB's parallel radix sort function to sort each sub-array. It
 then extracts the top-$k$ elements from each sub-array and concatenates them
 into a new array. This is recursively repeated until the global top-$k$
 elements are found. Even though this implementation is well-optimized, it may
-not be optimal for EDM since the target $k$ is relatively small ($\leq 20$).
+not be optimal for EDM because the target $k$ is relatively small ($\leq 20$).
 
 Finally, we were unable to implement efficient lookups on GPU using ArrayFire.
 ArrayFire provides a construct for embarrassingly parallel computation called
@@ -333,7 +341,7 @@ arrays.
 kEDM\footnote{\url{https://github.com/keichi/kEDM}} is our
 performance-portable implementation of EDM based on the Kokkos framework. We retain the high-level design of mpEDM, but
 reimplement the whole application using Kokkos and optimize the bottleneck kernels
-(\textit{i.e.} all $k$-nearest neighbor search and lookup). To ensure the correctness of the
+(\textit{i}.\textit{e}., all $k$-nearest neighbor search and lookup). To ensure the correctness of the
 implementation, outputs from kEDM are validated against mpEDM as well as
 the reference implementation of EDM
 (cppEDM\footnote{\url{https://github.com/SugiharaLab/cppEDM}}), using automated unit tests.
@@ -356,7 +364,7 @@ the Sandia National Laboratories. The aim of Kokkos is to abstract away the
 differences between low-level programming models such as OpenMP, CUDA and HIP,
 and exposes a high-level C++ programming interface to the developer. Kokkos allows
 developers to build cross-platform and performance-portable applications on a
-single code base.
+single codebase.
 
 To parallelize a loop in the Kokkos programming model, the developer specifies (1)
 the parallel pattern, (2) computational body, and (3) execution policy of the
@@ -431,7 +439,7 @@ perform the time delayed embedding and distance calculation.
 
 Algorithm~\ref{alg:distances} shows the pairwise distance calculation
 algorithm in kEDM\@. Using Kokkos' \texttt{TeamPolicy} and
-\texttt{ThreadRange}, we map the outer-most $i$-loop to thread teams and the $j$-loop to
+\texttt{TeamThreadRange}, we map the outer-most $i$-loop to thread teams and the $j$-loop to
 threads within a team. A consideration on CPU is which loop to vectorize.
 Since the inner-most $k$-loop is short ($E \leq 20$) in our use case,
 vectorizing it is not profitable. We therefore use Kokkos'
@@ -446,11 +454,11 @@ memory to speed up memory access.
 \begin{algorithm}
     \SetAlgoLined
     \DontPrintSemicolon
-    \KwIn{Library time series $x$ of length $L$, embedding dimension $E$, time lag $\tau$}
+    \KwIn{Library time series $x$ of length $L$}
     \KwOut{$L \times L$ pairwise distance matrix $D$}
     \tcp{\texttt{TeamPolicy}}
     \PFor{$i \leftarrow 1$ \KwTo $L$}{
-        \tcp{\texttt{ThreadRange}}
+        \tcp{\texttt{TeamThreadRange}}
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
             $D(i, j) \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E$}{
@@ -471,11 +479,9 @@ implemented a top-$k$ search algorithm that works on both CPU and GPU
 efficiently.
 
 Algorithm~\ref{alg:partial-sort} outlines our top-$k$ search algorithm. In our algorithm, each
-thread team finds the top-$k$ elements from one row of the distance matrix a
-time. Each thread within a thread team maintains a local priority queue on
-team-private scratch memory that holds the top-$k$ elements it has seen so far. Each thread
-reads the distance matrix in a coalesced manner and pushes the element to its
-local queue. Once all elements are processed, one leader thread in each thread team merges
+thread team finds the top-$k$ elements from one row of the distance matrix. Each thread within a thread team maintains a local priority queue on
+team-private scratch memory that holds the top-$k$ elements it has seen so far. Threads read the distance matrix in a coalesced manner and push the distances and indices to their
+local priority queues. Once all elements are processed, one leader thread in each thread team merges
 the local queues within the team and writes the final top-$k$ elements to
 global memory.
 
@@ -483,18 +489,19 @@ global memory.
     \SetAlgoLined
     \DontPrintSemicolon
     \KwIn{$L \times L$ pairwise distance matrix $D$}
-    \KwOut{$L \times k$ top-$k$ distance matrix $D'$}
+    \KwOut{$L \times k$ top-$k$ distance matrix $D_k$ and index matrix $I_k$}
     \tcp{\texttt{TeamPolicy}}
     \PFor{$i \leftarrow 1$ \KwTo $L$}{
-        \tcp{\texttt{ThreadRange}}
+        \tcp{\texttt{TeamThreadRange}}
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
-            Insert $D(i, j)$ into local priority queue\;
+            Insert $D(i, j),\,j$ into local priority queue\;
         }
         \For{$j \leftarrow 1$ \KwTo $k$}{
-            \For{$j \leftarrow 1$ \KwTo \# of threads}{
-                $D'(i, j) \leftarrow$ Pop element from priority queue\;
+            \For{$j \leftarrow 1$ \KwTo \# of threads in the team}{
+                $D_k(i, j),\,I_k(i, j) \leftarrow$ Pop element from priority queue\;
             }
         }
+        \tcp{Normalize $D_k$}
     }
     \caption{Partial sort}%
     \label{alg:partial-sort}
@@ -502,47 +509,51 @@ global memory.
 
 \subsection{Lookup}
 
-Given a library and a target time series, suppose the optimal embedding
-dimension of the target time series is $E$. We use the $E$-dimensional embedding
-of the library to predict the target. To maximize reuse of the lookup table, we
-can group the target time series by its optimal embedding dimension.
+To increase the degree of parallelism and reuse of precomputed distance and
+index matrices, we implement batched lookups. That is, we perform the lookups
+for multiple target time series in parallel. CCM requires the library
+time series to be embedded in the optimal embedding dimension of the target
+time series. Therefore, we first group the target time series by their optimal
+embedding dimensions and then perform multiple lookups for target time series that
+have the same optimal embedding dimension in parallel.
 
 Algorithm~\ref{alg:lookup} shows our lookup algorithm. The outer most $i$-loop
 iterates over all time series of which optimal embedding dimension is $E$. The loop is
 parallelized using \texttt{TeamPolicy}, where each team performs prediction of one
 target time series. The $j$-loop is parallelized using \texttt{TeamThreadRange},
-where each thread makes a prediction for each time point within a time series (line 5). The
-inner most serial $k$-loop is unrolled to exploit ILP\@. Since Kokkos currently
+where each thread makes a prediction for each time point within a time series. The
+inner most serial $k$-loop is unrolled to increase instruction-level parallelism. Since Kokkos currently
 lacks a feature to indicate loop unrolling, we use the \texttt{\#pragma
 unroll} directive here. The loop body requires indirect access to the target
-time series using the indices table. To speed up random access, we cache the
+time series using the indices table. To speed up random memory access, we cache the
 target time series in team-private scratch memory.
-
-In case the raw predictions are not needed but only the assessment of
-predictive skill is needed, kEDM does not write out the predicted time series
-to global memory. Instead, Pearson’s correlation is computed on-the-fly.
-Kokkos’ custom reduction feature is used to implement parallel calculation of the
-correlation coefficient. The algorithm is based on a numerically stable
-algorithm for computing (co-)variance proposed in~\cite{Schubert2018}.
 
 \begin{algorithm}
     \SetAlgoLined
     \DontPrintSemicolon
-    \KwIn{Target time series $y$, top-$k$ distance matrix $D_k$, top-$k$ index
-    matrix $T_k$, embedding dimension $E$}
-    \KwOut{Predicted time series $\hat{y}$}
+    \KwIn{Array of target time series $y$, top-$k$ distance matrix $D_k$ and index
+    matrix $I_k$ computed from the library time series}
+    \KwOut{Array of predicted time series $\hat{y}$}
     \tcp{\texttt{TeamPolicy}}
     \PFor{$i \leftarrow 1$ \KwTo $N$}{
-        \tcp{\texttt{ThreadRange}}
+        \tcp{\texttt{TeamThreadRange}}
         \PFor{$j \leftarrow 1$ \KwTo $L$}{
+                $\hat{y}(i, j) \leftarrow 0$\;
             \For{$k \leftarrow 1$ \KwTo $E+1$}{
-                $\hat{y}(i, j) \leftarrow \hat{y}(i, j) + D(j, k) \cdot y(T(j, k))$ \;
+                $\hat{y}(i, j) \leftarrow \hat{y}(i, j) + D_k(j, k) \cdot y(I_k(j, k))$ \;
             }
         }
     }
     \caption{Lookup}%
     \label{alg:lookup}
 \end{algorithm}
+
+In case the raw prediction is unneeded but only the assessment of the
+predictive skill is needed, kEDM does not write out the predicted time series
+to global memory. Instead, Pearson’s correlation is computed on-the-fly.
+Kokkos’ custom reduction feature is used to implement parallel calculation of the
+correlation coefficient. The algorithm is based on a numerically stable
+algorithm for computing covariance proposed in~\cite{Schubert2018}.
 
 \section{Evaluation}\label{sec:evaluation}
 
@@ -554,15 +565,15 @@ assess the efficiency of our implementation.
 
 % use table?
 
-We evaluated kEDM on two compute servers installed at the Salk Institute: (1)
-Ika and (2) Aori. Ika is equipped with two sockets of 20-core Intel Xeon Gold
-6148 CPUs, one NVIDIA V100 PCIe card and 384 GiB of RAM\@. Aori is equipped with
-two sockets of 64-core AMD EPYC 7742 CPUs and 1 TiB of RAM\@. kEDM was built
+We evaluated kEDM on two compute servers installed at the Salk Institute: Ika and Aori.
+Ika is equipped with two sockets of 20-core Intel Xeon Gold
+6148 CPUs, one NVIDIA V100 PCIe card and 384 GiB of DDR4 RAM\@. Aori is equipped with
+two sockets of 64-core AMD EPYC 7742 CPUs and 1 TiB of DDR4 RAM\@. kEDM was built
 with Kokkos 3.2 on both machines. On Aori, we used the AMD Optimizing C/C++
 Compiler (AOCC) 2.2.0, a fork of Clang by AMD. On Ika, we used the NVIDIA CUDA
 Compiler (NVCC) 10.1.
 
-\subsection{Micro benchmarks}
+\subsection{Micro Benchmarks}
 
 We implemented micro benchmarks to measure the performance of the individual
 kernels we described in Section~\ref{sec:proposal} and compare it with that of
@@ -574,72 +585,72 @@ $10^4$ time steps and varied the embedding dimension.
 The results indicate that the pairwise
 distance calculation in kEDM is significantly faster than mpEDM (up to
 6.6$\times$). This is because the time-delayed embedding is performed during the distance
-calculation on the GPU\@. The partial sort is also faster than mpEDM if $E$ is small (6.2$\times$ faster if $E=1$). However, kEDM's performance
-degrades as $E$ increases and slightly underperforms mpEDM when $E=20$. There are two main reasons for this. First, our current implementation of the priority queue uses a sorted array and takes $O(E)$ time to insert an element. Second, since the local priority queues are stored in shared memory, increasing the capacity of the local queue results in lower occupancy.
-
-Figure~\ref{fig:breakdown-knn-epyc} shows the runtime 
-on AMD EPYC 7742. It should be noted that the partial sort algorithm in mpEDM
-uses a max heap to store the elements. Since the $E$ we are interested is
-small, the difference between linear time and logarithmic time is not visible.
+calculation on the GPU\@. The partial sort is also faster than mpEDM if $E$ is small 
+(6.2$\times$ faster if $E=1$). However, kEDM's partial sort performance degrades as 
+$E$ increases and  slightly underperforms mpEDM when $E=20$. Since the local 
+priority queues are stored in shared memory, increasing the capacity of the local 
+queues increases shared memory usage and results in lower multiprocessor occupancy.
+Figure~\ref{fig:breakdown-knn-epyc} shows the runtime on AMD EPYC 7742. kEDM exhibits
+identical performance as mpEDM on EPYC 7742.
 
 Figures~\ref{fig:breakdown-lookup-v100} and~\ref{fig:breakdown-lookup-epyc}
 show the runtime of the lookup kernel (without cross correlation calculation) on V100 and EPYC 7742, respectively.
 Here, we generated $10^5$ synthetic target time series each having $10^4$ time 
 steps and performed lookups from a library time series with the same length.
-Note that we only ran kEDM on
+Note that we only executed kEDM on
 V100 since mpEDM lacks a lookup kernel for GPU as described earlier in
 Section~\ref{sec:flexibility}. These plots indicate that kEDM on V100
 consistently outperforms EPYC 7742 by a factor of 3--4$\times$.
 Interestingly, kEDM slightly outperforms mpEDM on EPYC as well. 
-This might attribute to the fact that we load the target time series to scratch memory before performing
-lookups. Even though CPUs do not have user-manageable memory, accessing the
+This might attribute to the fact that we load the target time series to scratch memory before performing lookups. Even though CPUs do not have user-manageable memory as opposed to GPUs, accessing the
 target time series might have loaded the time series on cache and improved the
 cache hit ratio.
 
 \begin{figure}
     \centering
+    \begin{minipage}{.5\textwidth}
     \includegraphics[width=.9\linewidth]{figs/breakdown_knn_v100}
     \caption{Breakdown of all k-NN search runtime on V100 ($L=10^4$)}%
     \label{fig:breakdown-knn-v100}
-\end{figure}
-
-\begin{figure}
-    \centering
+    \end{minipage}%
+    \begin{minipage}{.5\textwidth}
     \includegraphics[width=.9\linewidth]{figs/breakdown_knn_epyc}
     \caption{Breakdown of all k-NN search runtime on EPYC 7742 ($L=10^4$)}%
     \label{fig:breakdown-knn-epyc}
+    \end{minipage}
 \end{figure}
 
 \begin{figure}
     \centering
+    \begin{minipage}{.5\textwidth}
     \includegraphics[width=.9\linewidth]{figs/runtime_lookup_v100}
     \caption{Runtime of lookups on V100 ($L=10^4, N=10^5$)}%
     \label{fig:breakdown-lookup-v100}
-\end{figure}
-
-\begin{figure}
-    \centering
+    \end{minipage}%
+    \begin{minipage}{.5\textwidth}
     \includegraphics[width=.9\linewidth]{figs/runtime_lookup_epyc}
     \caption{Runtime of lookups on EPYC 7742 ($L=10^4, N=10^5$)}%
     \label{fig:breakdown-lookup-epyc}
+    \end{minipage}
 \end{figure}
 
-\subsection{Real-world datasets}
+\subsection{Real-world Datasets}
 
 We prepared six real-world datasets with diverse number and length of time
-series that reflect the variety of use cases. We then measured the runtime of kEDN for completing a pairwise CCM calculation.
+series that reflect the variety of use cases. We then measured the runtime of kEDN for completing pairwise CCM calculations.
 
-Table~\ref{tbl:real-world} shows the runtime for performing a pairwise CCM for
+Table~\ref{tbl:real-world} shows the runtime for performing a pairwise CCM on
 each dataset.
-Fish1\_Normo is a subset of 154 representative neurons of the dominant default zebrafish larvae neuronal behaviors collected by lightsheet microscopy of fish transgenic with nuclear localized GCAMP6f, a calcium indicator. Fly80XY is a drosophila melanogaster whole brain lightfield microscopy GCAMP6 recording, where distinct brain areas were identified by independent component analysis with the fly left right and forward walking speed behaviors collected on a styrofoam ball. Genes\_MEF contains the gene expression profiles of all genes and small RNAs from mouse embryo fibrobast genes over 96 time steps of two cycles of serum induction and starvation stimulation. Subject 6 and 11 are whole brain light sheep microscopy GCAMP6f recordings at whole brain scale and single neuron resolution of larval zebrafish. F1 is a subset of a larval zebrafish biochemically induced seizure recording with 3 phases, control conditions, pre-seizure and full seizure. 
+Fish1\_Normo is a subset of 154 representative neurons of the dominant default zebrafish larvae neuronal behaviors collected by lightsheet microscopy of fish transgenic with nuclear localized GCAMP6f, a calcium indicator. Fly80XY is a drosophila melanogaster whole brain lightfield microscopy GCAMP6 recording, where distinct brain areas were identified by independent component analysis with the fly left right and forward walking speed behaviors collected on a styrofoam ball. Genes\_MEF contains the gene expression profiles of all genes and small RNAs from mouse embryo fibrobast genes over 96 time steps of two cycles of serum induction and starvation stimulation. Subject6 and Subject11 are whole brain light sheep microscopy GCAMP6f recordings at whole brain scale and single neuron resolution of larval zebrafish. F1 is a subset of a larval zebrafish biochemically induced seizure recording with three phases: control conditions, pre-seizure and full seizure. 
 
-The results demonstrate that kEDM outperforms mpEDM in most
-cases. In particular, kEDM shows significantly better (up to 5.5$\times$)
-performance than mpEDM on the NVIDIA Tesla V100\@. This is because kEDM performs the lookups on the GPU instead of the CPU\@.
+The results clearly demonstrate that kEDM outperforms mpEDM in most
+cases. In particular, kEDM shows significantly higher (up to 5.5$\times$)
+performance than mpEDM on NVIDIA Tesla V100 and Intel Xeon Gold 6148. 
+This performance gain is obtained from the optimized $k$-nearest neighbor search and GPU-enabled lookup.
 
 \begin{table*}
 \centering
-\caption{Benchmark results using real-world datasets}%
+\caption{Benchmark of CCM runtime using real-world datasets}%
 \label{tbl:real-world}
 \begin{tabular}{@{}lrrrrrrrr@{}}
 \toprule
@@ -687,53 +698,53 @@ L1 and L2 cache bandwidth.
 
 \begin{figure}
     \centering
+    \begin{minipage}{.5\textwidth}
     \includegraphics[width=.9\linewidth]{figs/roofline_distances_v100}
     \caption{Roofline analysis of pairwise distance kernel on V100 ($L=10^4$)}%
     \label{fig:roofline-distances-v100}
-\end{figure}
-
-\begin{figure}
-    \centering
+    \end{minipage}%
+    \begin{minipage}{.5\textwidth}
     \includegraphics[width=.9\linewidth]{figs/roofline_distances_epyc}
     \caption{Roofline analysis of pairwise distance kernel on EPYC 7742 ($L=10^4$)}%
     \label{fig:roofline-distances-epyc}
+    \end{minipage}%
 \end{figure}
 
 Figures \ref{fig:roofline-lookup-v100} and \ref{fig:roofline-lookup-eypc} present
 the rooflines for the lookup kernel on V100 and EPYC 7742, respectively. These
 plots suggest that the lookup kernel is bounded by the L2 cache on V100 and
-the L1 cache on EPYC 7742. This is explained from the fact that the distances
-and index matrix fit on the respective caches. For example, the total size of
-the distance and index matrix is 1.6 MB if $E=20$, which fits on EPYC 7742's L1
+the L1 cache on EPYC 7742. This is explained from the fact that the distance
+and index matrices fit on the respective caches. For example, the total size of
+the distance and index matrices is 1.6 MB if $E=20$, which fits on EPYC 7742's L1
 cache (4 MiB) and V100's L2 cache (6 MiB).
 
 \begin{figure}
     \centering
+    \begin{minipage}{.5\textwidth}
     \includegraphics[width=.9\linewidth]{figs/roofline_lookup_wo_rho_v100}
     \caption{Roofline analysis of lookup kernel on V100 ($L=10^4, N=10^5$)}%
     \label{fig:roofline-lookup-v100}
-\end{figure}
-
-\begin{figure}
-    \centering
+    \end{minipage}%
+    \begin{minipage}{.5\textwidth}
     \includegraphics[width=.9\linewidth]{figs/roofline_lookup_wo_rho_epyc}
     \caption{Roofline analysis of lookup kernel on EPYC 7742 ($L=10^4, N=10^5$)}%
     \label{fig:roofline-lookup-eypc}
+    \end{minipage}%
 \end{figure}
 
-Overall, these roofline models show that kEDM operate closes to the rooflines
-and achieves high efficiency in most cases. In addition, the roofline models
-reveal that EDM is an inherently memory-bound algorithm, which is primarily
+Overall, these roofline models indicate that kEDM operates close to the
+ceilings and achieves high efficiency in most cases. Furthermore, the roofline
+models reveal that EDM is an inherently memory-bound algorithm, primarily
 bounded by memory or cache bandwidth depending on the embedding dimension. It
-does not enter the compute-bound region in our use cases. This fact suggests
-that kEDM would benefit from hardware with higher memory, cache, and
-load/store unit bandwidth.
+does not enter the compute-bound region of the roofline model in our use cases.
+This observation suggests that kEDM would benefit from hardware with higher memory, 
+cache, and load/store unit bandwidth.
 
 \section{Conclusion \& Future Work}\label{sec:conclusion}
 
 We designed and developed kEDM, a performance portable implementation of EDM
-based on the Kokkos performance portability framework. The new implementation
-is single-source and runs on both CPUs and GPUs. Furthermore, we removed several
+using the Kokkos performance portability framework. The new implementation
+is based on a single codebase and runs on both CPUs and GPUs. Furthermore, we removed several
 several inefficiencies from mpEDM and custom-tailored kernels. Benchmarks using real-world datasets indicate up to $5.5\times$
 speedup in convergent cross mapping computation.
 
@@ -742,7 +753,7 @@ users. We are also planning to evaluate on other hardware platforms such as AMD 
 
 \begin{acks}
 This work was partly supported by JSPS KAKENHI Grant Number JP20K19808 (KT) and an
-Innovation grant by the Kavli Institute for Brain and Mind (GMP). The authors would like to thank Dominic R.W. Burrows at the MRC Centre for Neurodevelopmental Disorders, Institute of Psychiatry, Psychology and Neuroscience, King's College London, London, UK for providing the F1 dataset used in the performance evaluation.
+Innovation grant by the Kavli Institute for Brain and Mind (GMP). The authors would like to thank Dominic R. W. Burrows at the MRC Centre for Neurodevelopmental Disorders, Institute of Psychiatry, Psychology and Neuroscience, King's College London, London, UK for providing the F1 dataset used in the performance evaluation.
 \end{acks}
 
 % check consistency (especially month)
