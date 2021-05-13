@@ -1,5 +1,4 @@
-% \documentclass[sigconf]{acmart}
-\documentclass{acmart}
+\documentclass[sigconf]{acmart}
 
 \RequirePackage[l2tabu, orthodox]{nag}
 
@@ -27,7 +26,7 @@
 % Listing
 \lstset{%
   language={C++},
-  basicstyle={\small\ttfamily},%
+  basicstyle={\footnotesize\ttfamily},%
   backgroundcolor=\color{color-bg},%
   identifierstyle={\ttfamily},%
   commentstyle={\itshape\color{color-comment}},%
@@ -47,13 +46,18 @@
   framexleftmargin=1.5em,%
 }
 
+\copyrightyear{2021}
+\acmYear{2021}
+\setcopyright{acmcopyright}\acmConference[PEARC '21]{Practice and Experience in Advanced Research Computing}{July 18--22, 2021}{Boston, MA, USA}
+\acmBooktitle{Practice and Experience in Advanced Research Computing (PEARC '21), July 18--22, 2021, Boston, MA, USA}
+\acmPrice{15.00}
+\acmDOI{10.1145/3437359.3465571}
+\acmISBN{978-1-4503-8292-2/21/07}
+
 \begin{document}
 
 % algorithme2
 \SetKwFor{PFor}{parallel for}{do}{end}
-
-\acmConference[PEARC '21]{PEARC '21: Practice and Experience in Advanced
-Research Computing}{July 18--22, 2021}{Virtual Conference}
 
 \title{kEDM: A Performance-portable Implementation of Empirical Dynamic
 Modeling using Kokkos}
@@ -183,7 +187,7 @@ Although mpEDM has successfully enabled EDM computation at an unprecedented
 scale, challenges remain. The primary challenge is
 \textit{performance portability} across diverse hardware platforms. Recent HPC
 landscape has seen significant increase in the diversity of processors and
-accelerators. This is reflected in the design of upcoming exascale HPC systems, for example, 
+accelerators. This is reflected in the design of upcoming exascale HPC systems, for example,
 the Frontier system at the Oak Ridge National Laboratory will use AMD EPYC
 CPUs and Radeon GPUs while the Aurora system at the Argonne National
 Laboratory will employ Intel Xeon CPUs and Xe GPUs; additionally, the Fugaku system at RIKEN
@@ -235,7 +239,7 @@ the following four steps:
     \item \textit{Embedding}: Both time series $X$ and $Y$ are embedded into
         $E$-dimensional state space using their time lags. For example, embedding
         of $X$ is denoted by $x$, where $x(t)=(X(t), X(t-\tau),
-        \dots, X(t-(E-1) \tau))$. Here, $\tau$ is the time lag and $E$ is 
+        \dots, X(t-(E-1) \tau))$. Here, $\tau$ is the time lag and $E$ is
         the embedding dimension, which is
         empirically determined and usually $E<20$ in real-world datasets.
     \item \textit{k-Nearest Neighbor Search}: For every library point $x(t)$,
@@ -265,7 +269,7 @@ the following four steps:
 
 These four steps are repeated for all pair of time series when performing pairwise
 CCM between multiple time series. Out of these steps, the $k$-nearest neighbor
-search and the lookup consume significant runtime and need to optimized. 
+search and the lookup consume significant runtime and need to optimized.
 The $k$-nearest neighbor search and lookup in the state space are fundamental operations in EDM and generally dominate the runtime in other EDM algorithms as well.
 We showed in our previous work~\cite{mpedm} that one can precompute the nearest
 neighbors for every point in $x$ (all $k$-NN search) and store them as a lookup
@@ -584,53 +588,53 @@ $10^4$ time steps and varied the embedding dimension.
 The results indicate that the pairwise
 distance calculation in kEDM is significantly faster than mpEDM (up to
 6.6$\times$). This is because the time-delayed embedding is performed during the distance
-calculation on the GPU\@. The partial sort is also faster than mpEDM if $E$ is small 
-(6.2$\times$ faster if $E=1$). However, kEDM's partial sort performance degrades as 
-$E$ increases and  slightly underperforms mpEDM when $E=20$. Since the local 
-priority queues are stored in shared memory, increasing the capacity of the local 
+calculation on the GPU\@. The partial sort is also faster than mpEDM if $E$ is small
+(6.2$\times$ faster if $E=1$). However, kEDM's partial sort performance degrades as
+$E$ increases and  slightly underperforms mpEDM when $E=20$. Since the local
+priority queues are stored in shared memory, increasing the capacity of the local
 queues increases shared memory usage and results in lower multiprocessor occupancy.
 Figure~\ref{fig:breakdown-knn-epyc} shows the runtime on AMD EPYC 7742. kEDM exhibits
 identical performance as mpEDM on EPYC 7742.
 
 Figures~\ref{fig:breakdown-lookup-v100} and~\ref{fig:breakdown-lookup-epyc}
 show the runtime of the lookup kernel (without cross correlation calculation) on V100 and EPYC 7742, respectively.
-Here, we generated $10^5$ synthetic target time series each having $10^4$ time 
+Here, we generated $10^5$ synthetic target time series each having $10^4$ time
 steps and performed lookups from a library time series with the same length.
 Note that we only executed kEDM on
 V100 since mpEDM lacks a lookup kernel for GPU as described earlier in
 Section~\ref{sec:flexibility}. These plots indicate that kEDM on V100
 consistently outperforms EPYC 7742 by a factor of 3--4$\times$.
-Interestingly, kEDM slightly outperforms mpEDM on EPYC as well. 
+Interestingly, kEDM slightly outperforms mpEDM on EPYC as well.
 This might attribute to the fact that we load the target time series to scratch memory before performing lookups. Even though CPUs do not have user-manageable memory as opposed to GPUs, accessing the
 target time series might have loaded the time series on cache and improved the
 cache hit ratio.
 
 \begin{figure}
     \centering
-    \begin{minipage}{.5\textwidth}
-    \includegraphics[width=.9\linewidth]{figs/breakdown_knn_v100}
+    \includegraphics[width=.90\linewidth]{figs/breakdown_knn_v100}
     \caption{Breakdown of all k-NN search runtime on V100 ($L=10^4$)}%
     \label{fig:breakdown-knn-v100}
-    \end{minipage}%
-    \begin{minipage}{.5\textwidth}
-    \includegraphics[width=.9\linewidth]{figs/breakdown_knn_epyc}
-    \caption{Breakdown of all k-NN search runtime on EPYC 7742 ($L=10^4$)}%
-    \label{fig:breakdown-knn-epyc}
-    \end{minipage}
 \end{figure}
 
 \begin{figure}
     \centering
-    \begin{minipage}{.5\textwidth}
-    \includegraphics[width=.9\linewidth]{figs/runtime_lookup_v100}
+    \includegraphics[width=.90\linewidth]{figs/breakdown_knn_epyc}
+    \caption{Breakdown of all k-NN search runtime on EPYC 7742 ($L=10^4$)}%
+    \label{fig:breakdown-knn-epyc}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=.90\linewidth]{figs/runtime_lookup_v100}
     \caption{Runtime of lookups on V100 ($L=10^4, N=10^5$)}%
     \label{fig:breakdown-lookup-v100}
-    \end{minipage}%
-    \begin{minipage}{.5\textwidth}
-    \includegraphics[width=.9\linewidth]{figs/runtime_lookup_epyc}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=.90\linewidth]{figs/runtime_lookup_epyc}
     \caption{Runtime of lookups on EPYC 7742 ($L=10^4, N=10^5$)}%
     \label{fig:breakdown-lookup-epyc}
-    \end{minipage}
 \end{figure}
 
 \subsection{Real-world Datasets}
@@ -640,11 +644,11 @@ series that reflect the variety of use cases. We then measured the runtime of kE
 
 Table~\ref{tbl:real-world} shows the runtime for performing a pairwise CCM on
 each dataset.
-Fish1\_Normo is a subset of 154 representative neurons of the dominant default zebrafish larvae neuronal behaviors collected by lightsheet microscopy of fish transgenic with nuclear localized GCAMP6f, a calcium indicator. Fly80XY is a drosophila melanogaster whole brain lightfield microscopy GCAMP6 recording, where distinct brain areas were identified by independent component analysis with the fly left right and forward walking speed behaviors collected on a styrofoam ball. Genes\_MEF contains the gene expression profiles of all genes and small RNAs from mouse embryo fibrobast genes over 96 time steps of two cycles of serum induction and starvation stimulation. Subject6 and Subject11 are whole brain light sheep microscopy GCAMP6f recordings at whole brain scale and single neuron resolution of larval zebrafish. F1 is a subset of a larval zebrafish biochemically induced seizure recording with three phases: control conditions, pre-seizure and full seizure. 
+Fish1\_Normo is a subset of 154 representative neurons of the dominant default zebrafish larvae neuronal behaviors collected by lightsheet microscopy of fish transgenic with nuclear localized GCAMP6f, a calcium indicator. Fly80XY is a drosophila melanogaster whole brain lightfield microscopy GCAMP6 recording, where distinct brain areas were identified by independent component analysis with the fly left right and forward walking speed behaviors collected on a styrofoam ball. Genes\_MEF contains the gene expression profiles of all genes and small RNAs from mouse embryo fibrobast genes over 96 time steps of two cycles of serum induction and starvation stimulation. Subject6 and Subject11 are whole brain light sheep microscopy GCAMP6f recordings at whole brain scale and single neuron resolution of larval zebrafish. F1 is a subset of a larval zebrafish biochemically induced seizure recording with three phases: control conditions, pre-seizure and full seizure.
 
 The results clearly demonstrate that kEDM outperforms mpEDM in most
 cases. In particular, kEDM shows significantly higher (up to 5.5$\times$)
-performance than mpEDM on NVIDIA Tesla V100 and Intel Xeon Gold 6148. 
+performance than mpEDM on NVIDIA Tesla V100 and Intel Xeon Gold 6148.
 This performance gain is obtained from the optimized $k$-nearest neighbor search and GPU-enabled lookup.
 
 \begin{table*}
@@ -697,16 +701,16 @@ L1 and L2 cache bandwidth.
 
 \begin{figure}
     \centering
-    \begin{minipage}{.5\textwidth}
-    \includegraphics[width=.9\linewidth]{figs/roofline_distances_v100}
+    \includegraphics[width=.90\linewidth]{figs/roofline_distances_v100}
     \caption{Roofline analysis of pairwise distance kernel on V100 ($L=10^4$)}%
     \label{fig:roofline-distances-v100}
-    \end{minipage}%
-    \begin{minipage}{.5\textwidth}
-    \includegraphics[width=.9\linewidth]{figs/roofline_distances_epyc}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=.90\linewidth]{figs/roofline_distances_epyc}
     \caption{Roofline analysis of pairwise distance kernel on EPYC 7742 ($L=10^4$)}%
     \label{fig:roofline-distances-epyc}
-    \end{minipage}%
 \end{figure}
 
 Figures \ref{fig:roofline-lookup-v100} and \ref{fig:roofline-lookup-eypc} present
@@ -719,16 +723,16 @@ cache (4 MiB) and V100's L2 cache (6 MiB).
 
 \begin{figure}
     \centering
-    \begin{minipage}{.5\textwidth}
-    \includegraphics[width=.9\linewidth]{figs/roofline_lookup_wo_rho_v100}
+    \includegraphics[width=.90\linewidth]{figs/roofline_lookup_wo_rho_v100}
     \caption{Roofline analysis of lookup kernel on V100 ($L=10^4, N=10^5$)}%
     \label{fig:roofline-lookup-v100}
-    \end{minipage}%
-    \begin{minipage}{.5\textwidth}
-    \includegraphics[width=.9\linewidth]{figs/roofline_lookup_wo_rho_epyc}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=.90\linewidth]{figs/roofline_lookup_wo_rho_epyc}
     \caption{Roofline analysis of lookup kernel on EPYC 7742 ($L=10^4, N=10^5$)}%
     \label{fig:roofline-lookup-eypc}
-    \end{minipage}%
 \end{figure}
 
 Overall, these roofline models indicate that kEDM operates close to the
@@ -736,7 +740,7 @@ ceilings and achieves high efficiency in most cases. Furthermore, the roofline
 models reveal that EDM is an inherently memory-bound algorithm, primarily
 bounded by memory or cache bandwidth depending on the embedding dimension. It
 does not enter the compute-bound region of the roofline model in our use cases.
-This observation suggests that kEDM would benefit from hardware with higher memory, 
+This observation suggests that kEDM would benefit from hardware with higher memory,
 cache, and load/store unit bandwidth.
 
 \section{Conclusion \& Future Work}\label{sec:conclusion}
