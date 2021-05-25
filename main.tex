@@ -161,7 +161,7 @@ Modeling using Kokkos}
 
 \begin{figure*}
     \centering
-    \includegraphics[width=.95\linewidth]{figs/xmap_overview}
+    \includegraphics[width=\linewidth]{figs/xmap_overview}
     \caption{Overview of Convergent Cross Mapping (CCM)}\label{fig:edm}
 \end{figure*}
 
@@ -171,8 +171,9 @@ assessing the non-linearity of a system, making short-term forecasts, and
 identifying the existence and strength of causal relationships between
 variables. Despite its wide applicability, EDM was not scalable to large
 datasets due to its expensive computational cost. To overcome this challenge,
-researchers have attempted to accelerate EDM from both algorithmic and
-implementational aspects~\cite{Pu2019,Ma2014}.
+several studies have been conducted to accelerate EDM by improving the
+algorithm~\cite{Ma2014} and taking advantage of parallel and distributed
+computing~\cite{Pu2019}.
 
 We tackle this challenge by taking advantage of modern HPC systems equipped
 with multi-core CPUs and GPUs. We have been developing a massively
@@ -592,9 +593,10 @@ calculation on the GPU\@. The partial sort is also faster than mpEDM if $E$ is s
 (6.2$\times$ faster if $E=1$). However, kEDM's partial sort performance degrades as
 $E$ increases and  slightly underperforms mpEDM when $E=20$. Since the local
 priority queues are stored in shared memory, increasing the capacity of the local
-queues increases shared memory usage and results in lower multiprocessor occupancy.
-Figure~\ref{fig:breakdown-knn-epyc} shows the runtime on AMD EPYC 7742. kEDM exhibits
-identical performance as mpEDM on EPYC 7742.
+queues increases shared memory usage and results in lower multiprocessor
+occupancy. We confirmed this fact using NVIDIA's Nsight Compute profiler.
+Figure~\ref{fig:breakdown-knn-epyc} shows the runtime on AMD EPYC 7742. kEDM
+exhibits identical performance as mpEDM on EPYC 7742.
 
 Figures~\ref{fig:breakdown-lookup-v100} and~\ref{fig:breakdown-lookup-epyc}
 show the runtime of the lookup kernel (without cross correlation calculation) on V100 and EPYC 7742, respectively.
@@ -611,28 +613,28 @@ cache hit ratio.
 
 \begin{figure}
     \centering
-    \includegraphics[width=.90\linewidth]{figs/breakdown_knn_v100}
+    \includegraphics[width=.80\linewidth]{figs/breakdown_knn_v100}
     \caption{Breakdown of all k-NN search runtime on V100 ($L=10^4$)}%
     \label{fig:breakdown-knn-v100}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=.90\linewidth]{figs/breakdown_knn_epyc}
+    \includegraphics[width=.80\linewidth]{figs/breakdown_knn_epyc}
     \caption{Breakdown of all k-NN search runtime on EPYC 7742 ($L=10^4$)}%
     \label{fig:breakdown-knn-epyc}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=.90\linewidth]{figs/runtime_lookup_v100}
+    \includegraphics[width=.80\linewidth]{figs/runtime_lookup_v100}
     \caption{Runtime of lookups on V100 ($L=10^4, N=10^5$)}%
     \label{fig:breakdown-lookup-v100}
 \end{figure}
 
 \begin{figure}
     \centering
-    \includegraphics[width=.90\linewidth]{figs/runtime_lookup_epyc}
+    \includegraphics[width=.80\linewidth]{figs/runtime_lookup_epyc}
     \caption{Runtime of lookups on EPYC 7742 ($L=10^4, N=10^5$)}%
     \label{fig:breakdown-lookup-epyc}
 \end{figure}
@@ -675,7 +677,7 @@ analysis~\cite{Williams2008} of our kernels. The compute and memory ceilings
 on each platform were measured using the Empirical Roofline Toolkit (ERT)\footnote{\url{https://bitbucket.org/berkeleylab/cs-roofline-toolkit}} 1.1.0.
 Since ERT fails to measure the L1 cache bandwidth on GPUs, we used the
 theoretical peak performance instead. We followed the methodology presented
-in~\cite{Yang2020a,Yang2020b} to measure the arithmetic intensity and the
+in~\cite{Yang2020b} to measure the arithmetic intensity and the
 attained FLOP/s. Nvprof 10.1 and likwid~\cite{Treibig2010} 5.0.1 were used to
 collect the required metrics on GPU and CPU, respectively.
 We used an artificial dataset containing $10^5$ time series each having $10^4$
@@ -759,8 +761,7 @@ This work was partly supported by JSPS KAKENHI Grant Number JP20K19808 (KT) and 
 Innovation grant by the Kavli Institute for Brain and Mind (GMP). The authors would like to thank Dominic R. W. Burrows at the MRC Centre for Neurodevelopmental Disorders, Institute of Psychiatry, Psychology and Neuroscience, King's College London, London, UK for providing the F1 dataset used in the performance evaluation.
 \end{acks}
 
-% check consistency (especially month)
-\bibliographystyle{IEEEtran}
+\bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 
 \end{document}
